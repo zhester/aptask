@@ -6,17 +6,43 @@
 ##############################################################################
 
 
+"""
+User task interface.  This module should be used to implement new task
+execution drivers.  A task is, semantically, the object a worker creates and
+manipulates to execute long-running code or programs.
+"""
+
 
 #=============================================================================
-class task( object ):
+STATUS_ERROR   = -1                 # task encountered an error
+STATUS_INIT    = 0                  # task is initialized
+STATUS_RUNNING = 1                  # task is executing as normal
+STATUS_DONE    = 2                  # task is done executing
+
+
+#=============================================================================
+class NotSupported( NotImplementedError ):
     """
-    Object created and used by a worker process to start and monitor a task.
-    Adding a new task interface requires implementing a child of this class.
-    Child classes must implement the following methods:
-        abort           Called to stop the task before completion
-        start           Called to start the task
-    Child classes should also implement the following method:
-        get_progress    Called to retrieve execution progress
+    Exception raised by methods that are not supported by the current task
+    instance.
+    """
+
+
+    #=========================================================================
+    def __str__( self ):
+        """
+        Convert to string representation.
+        @return         A string describing the exception
+        """
+
+        return 'Method not supported by this object.'
+
+
+#=============================================================================
+class Report( object ):
+    """
+    The object sent to the worker when reporting the status and progress of
+    a task.
     """
 
 
@@ -26,39 +52,74 @@ class task( object ):
         Constructor.
         """
 
-        pass
+        self.message  = None
+        self.progress = 0.0
+        self.status   = STATUS_INIT
+
+
+    #=========================================================================
+    def __str__( self ):
+        """
+        String casting.
+        """
+
+        return self.message
+
+
+#=============================================================================
+class Task( object ):
+    """
+    Object created and used by a worker process to start and monitor a task.
+    Adding a new task interface requires implementing a child of this class.
+    Child classes may implement the following methods:
+        abort           Called to stop the task before completion
+        initialize      Called to initialize or start the task
+        process         Called iteratively until the task is complete
+    These three methods must all return a Report object.
+    """
+
+
+    #=========================================================================
+    def __init__( self ):
+        """
+        Constructor.
+        """
+
+        self.report = Report()
 
 
     #=========================================================================
     def abort( self ):
         """
         Stops the execution of this task before completion.
-        @throws         NotImplementedError
+        @throws NotSupported
+                            Descendant class does not support this method
         """
 
-        raise NotImplementedError
+        raise NotSupported()
 
 
     #=========================================================================
-    def get_progress( self ):
+    def process( self ):
         """
-        Retrieves the most up-to-date task progress state.
+        Called iteratively until the task reports completion.
         @return         Task progress from 0.0 (none) to 1.0 (done)
-        @throws         NotImplementedError
+        @throws NotSupported
+                        Descendant class does not support this method
         """
 
-        raise NotImplementedError
+        raise NotSupported()
 
 
     #=========================================================================
-    def start( self ):
+    def initialize( self ):
         """
-        Starts the execution of this task.
-        @throws         NotImplementedError
+        Initializes or starts the execution of this task.
+        @throws NotSupported
+                            Descendant class does not support this method
         """
 
-        raise NotImplementedError
-
+        raise NotSupported()
 
 
 #=============================================================================

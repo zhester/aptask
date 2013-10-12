@@ -66,22 +66,23 @@ def worker( command_queue, status_queue, task_descriptor ):
     #
 
 
-    tsk.start()
+    tsk.initialize()
 
     while progress < 1.0:
 
         try:
             command = command_queue.get_nowait()
+        except Queue.Empty:
+            # if the queue is empty, continue processing/updating
+            pass
+        else:
             if command is not None:
                 command_id, = command
                 if command_id == manager.CMD_ABORT:
                     tsk.abort()
-        except Queue.Empty:
-            # if the queue is empty, continue processing/updating
-            pass
 
         # update task execution progress
-        progress = tsk.get_progress()
+        progress = tsk.process()
 
         try:
             # send status and progress to manager
@@ -101,7 +102,7 @@ def _create_task( descriptor ):
     """
 
     # ZIH - implement me!
-    return task.task()
+    return task.Task()
 
 
 #=============================================================================
