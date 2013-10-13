@@ -1,24 +1,27 @@
 #!/usr/bin/env python
-##############################################################################
-#
-# aptaskd.py
-#
-# aptask Daemon Script
-#
-##############################################################################
 
 
+"""
+Asynchronous Parallel Task Execution Daemon Script
+"""
+
+
+__version__ = '0.0.0'
+
+
+import os
 import signal
 
 
 #=============================================================================
-def daemon():
+def daemon( config ):
     """
     Daemon function allows this to be used from a wrapper script.
+    @param config       A dictionary of configuration values
+    @return             Exit code (0 = normal)
     """
 
     # ZIH - start/check sqlite history database
-    # ZIH - know host and port for net server
     # ZIH - start net server in its own process
     # ZIH - monitor the net request queue
     # ZIH - monitor active workers
@@ -46,20 +49,89 @@ def main( argv ):
     @return             Exit code (0 = success)
     """
 
+    # imports when using this as a script
+    import argparse
+    import json
+
     # install some signal handlers to override what Python installed
     signal.signal( signal.SIGTERM, signal_handler )
     signal.signal( signal.SIGINT,  signal_handler )
 
-    # ZIH - use proper argument handling to override default config file
-    #   location
+    # create and configure an argument parser
+    parser = argparse.ArgumentParser(
+        description = 'Asynchronous Parallel Task Execution Daemon Script'
+    )
+    parser.add_argument(
+        '-c',
+        '--config',
+        default = 'aptaskd.json',
+        help    = 'Load configuration file from this location.'
+    )
+    parser.add_argument(
+        '-v',
+        '--version',
+        default = False,
+        help    = 'Display script version.',
+        action  = 'store_true'
+    )
 
-    # ZIH - do program configuration here
+    # parse the arguments
+    args = parser.parse_args( argv[ 1 : ] )
+
+    # check for version request
+    if args.version == True:
+        print 'Version', __version__
+        return 0
+
+    # load configuration
+    config = json.load( args.config )
+
+    # check configuration
+    if _check_configuration( config ) == False:
+        return -1
 
     # run the daemon until shut down
-    exit_code = daemon()
+    exit_code = daemon( config )
 
     # return exit code
     return exit_code
+
+
+#=============================================================================
+def _check_configuration( config ):
+    """
+    Checks the supplied configuration against reality.
+    @param config       The configuration dictionary
+    @return             True if the config will work, false if not
+    """
+
+    if 'host' not in config:
+        return False
+
+    if 'port' not in config:
+        return False
+
+    if 'directories' not in config:
+        return False
+
+    dirs = config[ 'directories' ]
+
+    if 'data' not in dirs:
+        return false
+
+    if 'tasks' not in dirs:
+        return false
+
+    ok_bits = os.R_OK | os.W_OK | os.X_OK
+
+    if os.access( dirs[ 'data' ], ok_bits ) == False:
+        return False
+
+    if os.access( dirs[ 'tasks' ], ok_bits ) == False:
+        return False
+
+    return True
+
 
 #=============================================================================
 if __name__ == "__main__":
