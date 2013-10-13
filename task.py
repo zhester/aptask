@@ -14,13 +14,6 @@ manipulates to execute long-running code or programs.
 
 
 #=============================================================================
-STATUS_ERROR   = -1                 # task encountered an error
-STATUS_INIT    = 0                  # task is initialized
-STATUS_RUNNING = 1                  # task is executing as normal
-STATUS_DONE    = 2                  # task is done executing
-
-
-#=============================================================================
 class NotSupported( NotImplementedError ):
     """
     Exception raised by methods that are not supported by the current task
@@ -47,6 +40,13 @@ class Report( object ):
 
 
     #=========================================================================
+    ERROR   = -1                    # task encountered an error
+    INIT    = 0                     # task is initialized
+    RUNNING = 1                     # task is executing as normal
+    DONE    = 2                     # task is done executing
+
+
+    #=========================================================================
     def __init__( self ):
         """
         Constructor.
@@ -54,7 +54,7 @@ class Report( object ):
 
         self.message  = None
         self.progress = 0.0
-        self.status   = STATUS_INIT
+        self.status   = self.INIT
 
 
     #=========================================================================
@@ -64,6 +64,16 @@ class Report( object ):
         """
 
         return self.message
+
+
+    #=========================================================================
+    def is_done( self ):
+        """
+        Informs interested parties if the task has completed.
+        @return         True when task has finished executing
+        """
+
+        return self.status == self.DONE
 
 
 #=============================================================================
@@ -93,7 +103,7 @@ class Task( object ):
         """
         Stops the execution of this task before completion.
         @throws NotSupported
-                            Descendant class does not support this method
+                        Descendant class does not support this method
         """
 
         raise NotSupported()
@@ -116,7 +126,7 @@ class Task( object ):
         """
         Initializes or starts the execution of this task.
         @throws NotSupported
-                            Descendant class does not support this method
+                        Descendant class does not support this method
         """
 
         raise NotSupported()

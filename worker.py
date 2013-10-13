@@ -6,18 +6,39 @@
 ##############################################################################
 
 
+"""
+This module contains the interface to running a worker process.
+"""
+
+
 import Queue
 
 
-import manager
 import task
 
 
 #=============================================================================
-STATUS_INIT    = 0                  # worker is initializing task
-STATUS_RUNNING = 1                  # task is executing as normal
-STATUS_DONE    = 2                  # task is done executing
-STATUS_ERROR   = 99                 # worker encountered an error
+class Command( object ):
+    """
+    Worker control command.
+    """
+
+
+    #=========================================================================
+    CONTINUE = 0
+    ABORT    = 1
+
+
+    #=========================================================================
+    def __init__( self, command_id = Command.CONTINUE ):
+        """
+        Constructor.
+        @param command_id
+                        Command identifier
+        """
+
+        self.id = command_id
+
 
 
 #=============================================================================
@@ -43,33 +64,25 @@ def worker( command_queue, status_queue, task_descriptor ):
     @param
     """
 
-    command  = None
-    message  = None
-    progress = 0.0
-    status   = INIT
+    command = None
+    report  = None
 
+    # create the task object according to the descriptor
+    tsk = _create_task( task_descriptor )
+
+    # initialize task
+    #   some tasks will initialize here and start processing later
+    #   some tasks will block here until complete
+    #   some tasks won't implement this
     try:
-        tsk = _create_task( task_descriptor )
-    except ValueErrer:
-        status = ERROR
+        report = tsk.initialize()
+    except task.NotSupported:
+        pass
 
+    # loop until the task reports completion
+    while report.is_done() == False:
 
-    # ZIH - not sure this is the best pattern
-    #  init, proc
-    # some things are run with no control or monitoring
-    # some things have no control, but can be monitored
-    #
-    # some things are run in steps with control and monitoring
-
-    # incremental   monitorable   abortable
-    # -----------   -----------   ---------
-    #
-
-
-    tsk.initialize()
-
-    while progress < 1.0:
-
+        # check for any pending messages
         try:
             command = command_queue.get_nowait()
         except Queue.Empty:
@@ -77,18 +90,27 @@ def worker( command_queue, status_queue, task_descriptor ):
             pass
         else:
             if command is not None:
-                command_id, = command
-                if command_id == manager.CMD_ABORT:
-                    tsk.abort()
+                if command.id == Command.ABORT:
+                    try:
+                        report = tsk.abort()
+                    except task.NotSupported:
+                        pass
+                    # ZIH - we're putting too much trust in the driver to
+                    #  set the done status here... we should keep some local
+                    # state and time out if we keep processing
 
-        # update task execution progress
-        progress = tsk.process()
-
+        # spend time executing task
         try:
-            # send status and progress to manager
-            status_queue.put_nowait( ( status, progress, message ) )
+            report = tsk.process()
+        except task.NotSupported:
+            pass
+
+        # send status and progress to manager
+        try:
+            status_queue.put_nowait( report )
+            # ZIH - i don't like the manager having to know anything about the
+            #   task module... might want to repackage the data
         except Queue.Full:
-            # if the queue is full, try again next time
             pass
 
 
