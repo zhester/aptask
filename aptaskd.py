@@ -35,6 +35,7 @@ def daemon( config ):
     # args   = ( pipe, ( config[ 'host' ], config[ 'port' ] ), handler )
 
     # enter the task manager's daemon loop
+    #  -- could just be an iterative "process" call
 
     # return exit code
     return 0
