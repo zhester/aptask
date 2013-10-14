@@ -16,18 +16,12 @@ class Event( object ):
 
 
     #=========================================================================
-    table_name = 'log'
-
-
-    #=========================================================================
-    def __init__( self, message ):
+    def __init__( self, message, timestamp = None ):
         """
         """
 
-        self.message = message
-        self.open()
-        self._check_schema()
-        self.close()
+        self.message   = message
+        self.timestamp = timestamp
 
 
 #=============================================================================
@@ -37,11 +31,18 @@ class Log( object ):
 
 
     #=========================================================================
+    table_name = 'log'
+
+
+    #=========================================================================
     def __init__( self, db_file ):
         """
         """
 
         self.db_file = db_file
+        self.open()
+        self._check_schema()
+        self.close()
 
 
     #=========================================================================
@@ -50,6 +51,7 @@ class Log( object ):
         """
 
         self.open()
+        return self
 
 
     #=========================================================================
@@ -65,13 +67,14 @@ class Log( object ):
         """
         """
 
+        cursor = self.db.cursor()
         cursor.execute(
             """
-            insert into ? ( message ) values ( ? )
-            """,
-            ( self.table_name, event.message )
+            insert into %s ( message ) values ( ? )
+            """ % self.table_name,
+            ( event.message, )
         )
-        cursor.commit()
+        self.db.commit()
 
 
     #=========================================================================
@@ -91,13 +94,52 @@ class Log( object ):
 
 
     #=========================================================================
+    def purge( self ):
+        """
+        """
+
+        cursor = self.db.cursor()
+        cursor.execute(
+            """
+            delete from %s
+            """  % self.table_name
+        )
+
+
+    #=========================================================================
+    def tail( self, num_events = 10 ):
+        """
+        """
+
+        cursor = self.db.cursor()
+        cursor.execute(
+            """
+            select message, timestamp
+            from %s
+            order by
+                timestamp desc,
+                id desc
+            limit ?
+            """ % self.table_name,
+            ( num_events, )
+        )
+
+        # ZIH - a real tail doesn't invert time order... reverse this result
+        events = []
+        for event in cursor.fetchall():
+            events.append( Event( *event ) )
+
+        return events
+
+
+    #=========================================================================
     def _check_schema( self ):
         """
         """
 
         cursor = self.db.cursor()
         cursor.execute(
-            """"
+            """
             select name from sqlite_master
             where
                 type = 'table'
@@ -107,17 +149,51 @@ class Log( object ):
             ( self.table_name, )
         )
 
-        if cursor.rowcount == 0:
+        record = cursor.fetchone()
+
+        if record is None:
             cursor.execute(
                 """
-                create table ? (
+                create table %s (
                     id        integer primary key,
                     timestamp datetime default current_timestamp,
                     message   text not null
                 )
-                """,
-                ( self.table_name, )
+                """ % self.table_name
             )
-            cursor.commit()
 
 
+#=============================================================================
+def main( argv ):
+    """
+    Script execution entry point
+    @param argv         Arguments passed to the script
+    @return             Exit code (0 = success)
+    """
+
+    messages = [ 'hello log', 'event 2', 'event 3' ]
+
+    with Log( 'test.sqlite' ) as log:
+        log.purge()
+        for message in messages:
+            log.append( Event( message ) )
+
+        tail = log.tail()
+        index = len( messages ) - 1
+        for event in tail:
+            if event.message != messages[ index ]:
+                print 'error: logged message mismatch'
+                print '  ', event.message, '!=', messages[ index ]
+                return 1
+            index -= 1
+
+        print 'success: all logged messages recorded'
+
+    # return success
+    return 0
+
+
+#=============================================================================
+if __name__ == "__main__":
+    import sys
+    sys.exit( main( sys.argv ) )
