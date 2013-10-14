@@ -114,17 +114,27 @@ class Log( object ):
         cursor = self.db.cursor()
         cursor.execute(
             """
-            select message, timestamp
-            from %s
+            select
+                message,
+                timestamp
+            from (
+                select
+                    id,
+                    message,
+                    timestamp
+                from %s
+                order by
+                    timestamp desc,
+                    id desc
+                limit ?
+            ) as dummy_alias
             order by
-                timestamp desc,
-                id desc
-            limit ?
+                timestamp asc,
+                id asc
             """ % self.table_name,
             ( num_events, )
         )
 
-        # ZIH - a real tail doesn't invert time order... reverse this result
         events = []
         for event in cursor.fetchall():
             events.append( Event( *event ) )
@@ -140,7 +150,8 @@ class Log( object ):
         cursor = self.db.cursor()
         cursor.execute(
             """
-            select name from sqlite_master
+            select name
+            from sqlite_master
             where
                 type = 'table'
                 and
@@ -179,13 +190,13 @@ def main( argv ):
             log.append( Event( message ) )
 
         tail = log.tail()
-        index = len( messages ) - 1
+        index = 0
         for event in tail:
             if event.message != messages[ index ]:
                 print 'error: logged message mismatch'
                 print '  ', event.message, '!=', messages[ index ]
                 return 1
-            index -= 1
+            index += 1
 
         print 'success: all logged messages recorded'
 
