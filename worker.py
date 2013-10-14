@@ -1,18 +1,11 @@
 #!/usr/bin/env python
-##############################################################################
-#
-# worker.py
-#
-##############################################################################
-
 
 """
-This module contains the interface to running a worker process.
+Worker Process
 """
 
 
 import Queue
-
 
 import task
 

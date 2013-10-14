@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-
 """
 Event Log Interface
 """
@@ -75,6 +74,14 @@ class Log( object ):
             ( event.message, )
         )
         self.db.commit()
+
+
+    #=========================================================================
+    def append_message( self, message ):
+        """
+        """
+
+        self.append( Event( message ) )
 
 
     #=========================================================================
@@ -187,7 +194,7 @@ def main( argv ):
     with Log( 'test.sqlite' ) as log:
         log.purge()
         for message in messages:
-            log.append( Event( message ) )
+            log.append_message( message )
 
         tail = log.tail()
         index = 0

@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 
-
 """
 Asynchronous Parallel Task Execution Daemon Script
 """
-
 
 __version__ = '0.0.0'
 
 
 import os
 import signal
+
+import log
 
 
 #=============================================================================
@@ -21,13 +21,23 @@ def daemon( config ):
     @return             Exit code (0 = normal)
     """
 
-    # ZIH - start/check sqlite history database
-    # ZIH - start net server in its own process
-    # ZIH - monitor the net request queue
-    # ZIH - monitor active workers
+    # initialize the logging facility
+    log_file = config[ 'directories' ][ 'data' ] + os.sep + 'log.sqlite'
+    log = log.Log( log_file )
+    log.append_message( 'initializing daemon' )
 
-    while( 1 ):
-        pass
+    # create the network control pipe
+
+    # create the task manager
+
+    # start network server in its own process
+    # target = net.net
+    # args   = ( pipe, ( config[ 'host' ], config[ 'port' ] ), handler )
+
+    # enter the task manager's daemon loop
+
+    # return exit code
+    return 0
 
 
 #=============================================================================
@@ -38,6 +48,7 @@ def signal_handler( signal_number, frame ):
                         The signal number from the OS interrupt
     @param frame        The frame
     """
+
     pass
 
 
@@ -122,12 +133,10 @@ def _check_configuration( config ):
     if 'tasks' not in dirs:
         return false
 
-    ok_bits = os.R_OK | os.W_OK | os.X_OK
-
-    if os.access( dirs[ 'data' ], ok_bits ) == False:
+    if os.access( dirs[ 'data' ], ( os.R_OK | os.W_OK | os.X_OK ) ) == False:
         return False
 
-    if os.access( dirs[ 'tasks' ], ok_bits ) == False:
+    if os.access( dirs[ 'tasks' ], ( os.R_OK | os.X_OK ) ) == False:
         return False
 
     return True
