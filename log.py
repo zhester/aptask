@@ -39,9 +39,9 @@ class Log( object ):
         """
 
         self.db_file = db_file
-        self.open()
+        self.db = sqlite3.connect( self.db_file )
+        self.is_open = True
         self._check_schema()
-        self.close()
 
 
     #=========================================================================
@@ -49,7 +49,9 @@ class Log( object ):
         """
         """
 
-        self.open()
+        if self.is_open == False:
+            self.db = sqlite3.connect( self.db_file )
+            self.is_open = True
         return self
 
 
@@ -58,7 +60,8 @@ class Log( object ):
         """
         """
 
-        self.close()
+        if self.is_open == True:
+            self.close()
 
 
     #=========================================================================
@@ -90,14 +93,6 @@ class Log( object ):
         """
 
         self.db.close()
-
-
-    #=========================================================================
-    def open( self ):
-        """
-        """
-
-        self.db = sqlite3.connect( self.db_file )
 
 
     #=========================================================================
