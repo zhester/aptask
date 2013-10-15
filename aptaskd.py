@@ -11,6 +11,7 @@ import os
 import signal
 
 import log
+import net
 
 
 #=============================================================================
@@ -24,18 +25,33 @@ def daemon( config ):
     # initialize the logging facility
     log_file = config[ 'directories' ][ 'data' ] + os.sep + 'log.sqlite'
     log = log.Log( log_file )
+    log.open()
     log.append_message( 'initializing daemon' )
+    log.close()
 
-    # create the network control pipe
-
-    # create the task manager
+    # create the network server control pipe
+    ( p_pipe, c_pipe ) = multiprocessing.Pipe( True )
 
     # start network server in its own process
-    # target = net.net
-    # args   = ( pipe, ( config[ 'host' ], config[ 'port' ] ), handler )
+    netd = multiprocessing.Process(
+        target = net.net,
+        args   = ( c_pipe, ( config[ 'host' ], config[ 'port' ] ), handler ),
+        name   = 'aptasknetd'
+    )
+
+    # create the task manager
+    ### man = Manager()
 
     # enter the task manager's daemon loop
     #  -- could just be an iterative "process" call
+    #     result = man.process()
+
+    # shut down task manager
+    ### man.stop()
+
+    # shut down network server
+    p_pipe.send( net.QUIT )
+    netd.join()
 
     # return exit code
     return 0
@@ -100,6 +116,7 @@ def main( argv ):
 
     # check configuration
     if _check_configuration( config ) == False:
+        print 'invalid configuration'
         return -1
 
     # run the daemon until shut down

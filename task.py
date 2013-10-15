@@ -106,10 +106,9 @@ class Task( object ):
 
 
     #=========================================================================
-    def process( self ):
+    def initialize( self ):
         """
-        Called iteratively until the task reports completion.
-        @return         Task progress from 0.0 (none) to 1.0 (done)
+        Initializes or starts the execution of this task.
         @throws NotSupported
                         Descendant class does not support this method
         """
@@ -118,9 +117,10 @@ class Task( object ):
 
 
     #=========================================================================
-    def initialize( self ):
+    def process( self ):
         """
-        Initializes or starts the execution of this task.
+        Called iteratively until the task reports completion.
+        @return         Task progress from 0.0 (none) to 1.0 (done)
         @throws NotSupported
                         Descendant class does not support this method
         """
