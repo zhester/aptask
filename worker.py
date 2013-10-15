@@ -117,6 +117,7 @@ def _create_task( descriptor ):
     """
 
     # ZIH - implement me!
+    raise NotImplementedError
     return task.Task()
 
 
