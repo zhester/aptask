@@ -14,18 +14,25 @@ import socket
 
 
 #=============================================================================
-QUIT = 86                           # value to send to shut down the process
+class Message( object ):
+    DATA = 1
+    QUIT = 86
+    def __init__( self, id = DATA, data = None ):
+        self.id   = id
+        self.data = data
 
 
 #=============================================================================
-def net( pipe, address, handler ):
+QUIT = Message( Message.QUIT )      # message to send to shut down the process
+
+
+#=============================================================================
+def net( pipe, address ):
     """
     Network daemon process function.
     @param
     @param
     """
-
-    # ZIH - may change pipe to queue if i don't need to send anything back
 
     # set the maximum backlog for new connections (5 is often max)
     backlog = 5
@@ -56,7 +63,7 @@ def net( pipe, address, handler ):
             # handle parent process messages
             if ready == pipe:
                 message = pipe.recv()
-                if message == QUIT:
+                if message.id == Message.QUIT:
                     is_running = False
 
             # handle a new connection with a network client
@@ -73,12 +80,19 @@ def net( pipe, address, handler ):
                 # ZIH - not sure what i'm testing yet (none? empty string?)
                 if payload:
 
-                    # pass the request to the handler which should send the
-                    #   response using the supplied socket
-                    close = handler( ready, address, payload )
-                    if close = True:
-                        ready.close()
-                        input.remove( ready )
+                    # send request to parent
+                    request = Message( data = payload )
+                    pipe.send( request )
+
+                    # get response and send data to client
+                    response = pipe.recv()
+                    ready.send( response.data )
+                    input.remove( ready )
+
+                    # ZIH - this could be improved by not blocking on the
+                    # pipe receive... would need to manage a list of sockets
+                    # waiting for a response, and sending to the socket after
+                    # the pipe has data from select
 
                 # no data in payload, drop the connection
                 else:

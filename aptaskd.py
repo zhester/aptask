@@ -10,6 +10,7 @@ __version__ = '0.0.0'
 import os
 import signal
 import sys
+import time
 
 import log
 import net
@@ -63,13 +64,13 @@ def start( config ):
     # create network server in its own process
     netd = multiprocessing.Process(
         target = net.net,
-        args   = ( c_pipe, ( config[ 'host' ], config[ 'port' ] ), handler ),
+        args   = ( c_pipe, ( config[ 'host' ], config[ 'port' ] ) ),
         name   = 'aptasknetd'
     )
 
-    # create the task manager
-    ### man = Manager()
-    ### man.start()
+    # create and start the task manager
+    man = Manager()
+    man.start()
 
     # set running flag
     _is_running = True
@@ -80,16 +81,23 @@ def start( config ):
     # enter daemon loop
     while _is_running == True:
 
-        # check (p_pipe.poll()) for requests from netd
-            # get responses from man
+        # check for requests from netd
+        if p_pipe.poll() == True:
 
-        # allow manager to also poll worker queues
-        #   manager handles list of queues to poll
-        ### man.process()
+            # get message, handle, and send response
+            message = p_pipe.recv()
+            message.data = man.handle_request( message.data )
+            p_pipe.send( message )
 
+        # allow manager to process worker queues
+        man.process()
+
+        # poll interval (may not be needed, or could be adaptive)
+        if _is_running == True:
+            time.sleep( 0.005 )
 
     # shut down task manager
-    ### man.stop()
+    man.stop()
 
     # shut down network server
     p_pipe.send( net.QUIT )
