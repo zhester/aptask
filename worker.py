@@ -5,6 +5,7 @@ Worker Process
 """
 
 
+import importlib
 import Queue
 
 import task
@@ -113,12 +114,17 @@ def _create_task( descriptor ):
     Creates a task object from a descriptor.
     @param descriptor   Task descriptor
     @return             Task instance
-    @throws ValueError  When the descriptor can not be resolved
+    ###@throws ValueError  When the descriptor can not be resolved
     """
 
-    # ZIH - implement me!
-    raise NotImplementedError
-    return task.Task()
+    # import the task module by name
+    module    = importlib.import_module( descriptor[ 'name' ].lower() )
+
+    # get the reference to the task driver class
+    class_ref = getattr( module, descriptor[ 'name' ] )
+
+    # instantiate the class, and return it
+    return class_ref( descriptor[ 'args' ] )
 
 
 #=============================================================================

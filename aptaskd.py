@@ -9,6 +9,7 @@ __version__ = '0.0.0'
 
 import os
 import signal
+import sys
 
 import log
 import net
@@ -41,6 +42,15 @@ def start( config ):
 
     # global control flag
     global _is_running
+
+    # add tasks directory to import path list
+    tasks_dir = config[ 'directories' ][ 'tasks' ]
+    if tasks_dir.startswith( '/' ) == True:
+        sys.path.append( tasks_dir )
+    else:
+        script_path = os.path.realpath( __file__ )
+        script_dir  = os.path.dirname( script_path )
+        sys.path.append( script_dir + os.sep + tasks_dir )
 
     # initialize the logging facility
     log_file = config[ 'directories' ][ 'data' ] + os.sep + 'log.sqlite'
@@ -199,6 +209,4 @@ def _check_configuration( config ):
 
 #=============================================================================
 if __name__ == "__main__":
-    import sys
     sys.exit( main( sys.argv ) )
-
