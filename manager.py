@@ -17,12 +17,23 @@ class Manager( object ):
 
 
     #=========================================================================
-    def __init__( self ):
+    def __init__(
+        self,
+        data_dir  = '.',
+        log       = None,
+        auth_keys = None
+    ):
         """
         Constructor.
+        @param data_dir
+        @param log
+        @param auth_keys
         """
 
-        self.workers = []
+        self.auth_keys = auth_keys
+        self.data_dir  = data_dir
+        self.log       = log
+        self.workers   = []
 
 
     #=========================================================================

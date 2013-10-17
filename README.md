@@ -34,3 +34,94 @@ possible integration, these systems should provide some sort of execution
 feedback.  Native Python code and drivers for external applications can be
 built on top of an existing Python class that greatly simplifies adding new
 processing capabilities to the system.
+
+Protocol
+--------
+
+Clients send and receive data using JSON messages.  Messages sent from a
+client are requests.  Messages sent from a server are responses.
+
+### User Requests ###
+
+#### `index`: Request Supported Task List ####
+
+    {
+        "key" : "<userkey>",
+        "request" : "index"
+    }
+
+#### `start`: Request New Task ####
+
+    {
+        "key" : "<userkey>",
+        "request" : "start",
+        "name" : "<taskname>",
+        "arguments" : [ "<argument1>", "<argument2>" ]
+    }
+
+#### `stop`: Request Task Abort ####
+
+    {
+        "key" : "<userkey>",
+        "request" : "stop",
+        "id" : "<taskid>"
+    }
+
+#### `active`: Request My Active Tasks' Status ####
+
+    {
+        "key" : "<userkey>",
+        "request" : "active"
+    }
+
+### Responses to User Requests ###
+
+#### Task Index ####
+
+    {
+        "status" : "ok",
+        "response" : "index",
+        "index" : [
+            "<taskname>" : {
+                "arguments" : [
+                    [ "<argument1>", "string" ],
+                    [ "<argument2>", "string" ]
+                ]
+            }
+        ]
+    }
+
+#### Start Task ####
+
+    {
+        "status" : "ok",
+        "response" : "start",
+        "taskid" : "<taskid>"
+    }
+
+#### Stop Task ####
+
+    {
+        "status" : "ok",
+        "response" : "stop",
+        "taskid" : "<taskid>"
+    }
+
+#### Show Active Tasks ####
+
+    {
+        "status" : "ok",
+        "response" : "active",
+        "active" : [
+            {
+                "taskid" : "<taskid>",
+                "status" : "<status>",
+                "progress" : "<progress>",
+                "message" : "<message>"
+            }
+        ]
+    }
+
+### Admin Requests ###
+
+### Responses to Admin Requests ###

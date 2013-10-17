@@ -5,5 +5,9 @@
     "directories" : {
         "tasks" : "tasks",
         "data" : "var"
+    },
+    "keys" : {
+        "admins" : [ "adminkey" ],
+        "users" : [ "userkey" ]
     }
 }
