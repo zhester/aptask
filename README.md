@@ -82,7 +82,8 @@ client are requests.  Messages sent from a server are responses.
         "status" : "ok",
         "response" : "index",
         "index" : [
-            "<taskname>" : {
+            {
+                "name" : "<taskname>"
                 "arguments" : [
                     {
                         "name" : "<argument1>",

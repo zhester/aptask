@@ -6,8 +6,10 @@ Application Configuration
 
 
 import glob
+import importlib
 import json
 import os
+import sys
 
 
 #=============================================================================
@@ -131,8 +133,25 @@ class Configuration( object ):
         """
 
         path = self.get_path( 'tasks' )
+
+        if path not in sys.path:
+            sys.path.append( path )
+
+        index = []
+
         modules = glob.glob( path + '/*.py' )
-        ##########
+        for modfile in modules:
+            modname = os.path.basename( modfile )[ : -3 ]
+            module  = importlib.import_module( modname )
+            for symname in dir( module ):
+                if symname.lower() == modname:
+                    ref = getattr( module, symname )
+                    index.append( {
+                        'name' : symname,
+                        'arguments' : ref.getargs()
+                    } )
+
+        return index
 
 
     #=========================================================================
@@ -140,10 +159,10 @@ class Configuration( object ):
         """
         """
 
-        if 'keys' not in self._data
+        if 'keys' not in self._data:
             return True
 
-        if 'admins' not in self._data[ 'keys' ]
+        if 'admins' not in self._data[ 'keys' ]:
             return True
 
         if self._data[ 'keys' ][ 'admins' ] is None:
@@ -157,10 +176,10 @@ class Configuration( object ):
         """
         """
 
-        if 'keys' not in self._data
+        if 'keys' not in self._data:
             return True
 
-        if 'users' not in self._data[ 'keys' ]
+        if 'users' not in self._data[ 'keys' ]:
             return True
 
         if self._data[ 'keys' ][ 'users' ] is None:
@@ -174,7 +193,8 @@ class Configuration( object ):
         """
         """
 
-        self._data = json.load( config_file )
+        with open( config_file, 'rb' ) as cf:
+            self._data = json.load( cf )
         self.verify()
 
 
@@ -206,3 +226,31 @@ class Configuration( object ):
 
         if os.access( dirs[ 'tasks' ], ( os.R_OK | os.X_OK ) ) == False:
             raise VerificationError()
+
+
+#=============================================================================
+def main( argv ):
+    """
+    Script execution entry point
+    @param argv         Arguments passed to the script
+    @return             Exit code (0 = success)
+    """
+
+    conf = load_configuration( 'aptaskd.json' )
+
+    pp = {
+        'sort_keys'  : True,
+        'indent'     : 4,
+        'separators' : ( ',', ' : ' )
+    }
+
+    print json.dumps( conf.get_address(), **pp )
+
+    print json.dumps( conf.get_task_index(), **pp )
+
+    # return success
+    return 0
+
+#=============================================================================
+if __name__ == "__main__":
+    sys.exit( main( sys.argv ) )

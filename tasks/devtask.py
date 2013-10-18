@@ -12,17 +12,18 @@ import task
 
 class DevTask( task.Task ):
 
-    def abort( self ):
-        self.report.status = task.Report.DONE
-        return self.report
-
-    def getargs( self ):
+    @staticmethod
+    def getargs():
         return [
             {
                 "name" : "devarg",
                 "default" : 42
             }
         ]
+
+    def abort( self ):
+        self.report.status = task.Report.DONE
+        return self.report
 
     def initialize( self ):
         self.report.progress = 0.0

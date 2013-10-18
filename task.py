@@ -97,18 +97,8 @@ class Task( object ):
 
 
     #=========================================================================
-    def abort( self ):
-        """
-        Stops the execution of this task before completion.
-        @throws NotSupported
-                        Descendant class does not support this method
-        """
-
-        raise NotSupported()
-
-
-    #=========================================================================
-    def getargs( self ):
+    @staticmethod
+    def getargs():
         """
         Retrieves the argument list for this task.
         An argument list is a list of dicts.  Each dict describes an argument
@@ -122,6 +112,17 @@ class Task( object ):
         """
 
         return []
+
+
+    #=========================================================================
+    def abort( self ):
+        """
+        Stops the execution of this task before completion.
+        @throws NotSupported
+                        Descendant class does not support this method
+        """
+
+        raise NotSupported()
 
 
     #=========================================================================
