@@ -16,6 +16,14 @@ class DevTask( task.Task ):
         self.report.status = task.Report.DONE
         return self.report
 
+    def getargs( self ):
+        return [
+            {
+                "name" : "devarg",
+                "default" : 42
+            }
+        ]
+
     def initialize( self ):
         self.report.progress = 0.0
         self.report.status = task.Report.INIT

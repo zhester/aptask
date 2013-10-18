@@ -84,8 +84,15 @@ client are requests.  Messages sent from a server are responses.
         "index" : [
             "<taskname>" : {
                 "arguments" : [
-                    [ "<argument1>", "string" ],
-                    [ "<argument2>", "string" ]
+                    {
+                        "name" : "<argument1>",
+                        "type" : "str",
+                        "required" : true
+                    },
+                    {
+                        "name" : "<argument2>",
+                        "default" : 42
+                    }
                 ]
             }
         ]

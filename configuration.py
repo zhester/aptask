@@ -5,6 +5,7 @@ Application Configuration
 """
 
 
+import glob
 import json
 import os
 
@@ -122,6 +123,16 @@ class Configuration( object ):
         script_path = os.path.realpath( __file__ )
         script_dir  = os.path.dirname( script_path )
         return script_dir + os.sep + base
+
+
+    #=========================================================================
+    def get_task_index( self ):
+        """
+        """
+
+        path = self.get_path( 'tasks' )
+        modules = glob.glob( path + '/*.py' )
+        ##########
 
 
     #=========================================================================

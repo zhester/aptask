@@ -79,6 +79,7 @@ class Task( object ):
     Adding a new task interface requires implementing a child of this class.
     Child classes may implement the following methods:
         abort           Called to stop the task before completion
+        getargs         Used to describe acceptable arguments
         initialize      Called to initialize or start the task
         process         Called iteratively until the task is complete
     These three methods must all return a Report object.
@@ -86,12 +87,13 @@ class Task( object ):
 
 
     #=========================================================================
-    def __init__( self ):
+    def __init__( self, arguments = None ):
         """
         Constructor.
         """
 
-        self.report = Report()
+        self.arguments = arguments
+        self.report    = Report()
 
 
     #=========================================================================
@@ -103,6 +105,23 @@ class Task( object ):
         """
 
         raise NotSupported()
+
+
+    #=========================================================================
+    def getargs( self ):
+        """
+        Retrieves the argument list for this task.
+        An argument list is a list of dicts.  Each dict describes an argument
+        with the following keys:
+            name        Binding name
+            default     Default value if not supplied (implies type)
+            required    True if this must always be specified
+            help        Brief description of the purpose of this argument
+            type        Argument type (if no default is given)
+                        (int|float|str) later: (list|dict)
+        """
+
+        return []
 
 
     #=========================================================================
