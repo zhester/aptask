@@ -1,7 +1,7 @@
 {
     "_see" : "INSTALL.md",
     "host" : "",
-    "port" : "2142",
+    "port" : 2142,
     "directories" : {
         "tasks" : "tasks",
         "data" : "var"

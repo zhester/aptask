@@ -64,7 +64,7 @@ client are requests.  Messages sent from a server are responses.
     {
         "key" : "<userkey>",
         "request" : "stop",
-        "id" : "<taskid>"
+        "taskid" : "<taskid>"
     }
 
 #### `active`: Request My Active Tasks' Status ####
