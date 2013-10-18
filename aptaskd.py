@@ -12,6 +12,7 @@ import signal
 import sys
 import time
 
+import configuration
 import log
 import net
 
@@ -37,7 +38,7 @@ def signal_handler( signal_number, frame ):
 def start( config ):
     """
     Daemon function allows this to be used from a wrapper script.
-    @param config       A dictionary of configuration values
+    @param config       Application configuration object
     @return             Exit code (0 = normal)
     """
 
@@ -45,18 +46,11 @@ def start( config ):
     global _is_running
 
     # add tasks directory to import path list
-    tasks_dir = config[ 'directories' ][ 'tasks' ]
-    if tasks_dir.startswith( '/' ) == True:
-        sys.path.append( tasks_dir )
-    else:
-        script_path = os.path.realpath( __file__ )
-        script_dir  = os.path.dirname( script_path )
-        sys.path.append( script_dir + os.sep + tasks_dir )
+    sys.path.append( config.get_path( 'tasks' ) )
 
     # initialize the logging facility
-    log_file = config[ 'directories' ][ 'data' ] + os.sep + 'log.sqlite'
-    log = log.Log( log_file )
-    log.append_message( 'initializing daemon' )
+    logger = log.Log( config.get_log_file() )
+    logger.append_message( 'initializing daemon' )
 
     # create the network server control pipe
     ( p_pipe, c_pipe ) = multiprocessing.Pipe( True )
@@ -64,12 +58,12 @@ def start( config ):
     # create network server in its own process
     netd = multiprocessing.Process(
         target = net.net,
-        args   = ( c_pipe, ( config[ 'host' ], config[ 'port' ] ) ),
+        args   = ( c_pipe, config.get_address() ),
         name   = 'aptasknetd'
     )
 
     # create and start the task manager
-    man = Manager()
+    man = Manager( config, logger )
     man.start()
 
     # set running flag
@@ -104,8 +98,8 @@ def start( config ):
     netd.join()
 
     # indicate shut down and close log
-    log.append_message( 'shutting down daemon' )
-    log.close()
+    logger.append_message( 'shutting down daemon' )
+    logger.close()
 
     # return exit code
     return 0
@@ -167,10 +161,10 @@ def main( argv ):
         return 0
 
     # load configuration
-    config = json.load( args.config )
+    config = load_configuration( args.config )
 
     # check configuration
-    if _check_configuration( config ) == False:
+    if config is None:
         print 'invalid configuration'
         return -1
 
@@ -179,40 +173,6 @@ def main( argv ):
 
     # return exit code
     return exit_code
-
-
-#=============================================================================
-def _check_configuration( config ):
-    """
-    Checks the supplied configuration against reality.
-    @param config       The configuration dictionary
-    @return             True if the config will work, false if not
-    """
-
-    if 'host' not in config:
-        return False
-
-    if 'port' not in config:
-        return False
-
-    if 'directories' not in config:
-        return False
-
-    dirs = config[ 'directories' ]
-
-    if 'data' not in dirs:
-        return false
-
-    if 'tasks' not in dirs:
-        return false
-
-    if os.access( dirs[ 'data' ], ( os.R_OK | os.W_OK | os.X_OK ) ) == False:
-        return False
-
-    if os.access( dirs[ 'tasks' ], ( os.R_OK | os.X_OK ) ) == False:
-        return False
-
-    return True
 
 
 #=============================================================================

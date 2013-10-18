@@ -17,23 +17,16 @@ class Manager( object ):
 
 
     #=========================================================================
-    def __init__(
-        self,
-        data_dir  = '.',
-        log       = None,
-        auth_keys = None
-    ):
+    def __init__( self, config, log ):
         """
         Constructor.
-        @param data_dir
+        @param config
         @param log
-        @param auth_keys
         """
 
-        self.auth_keys = auth_keys
-        self.data_dir  = data_dir
-        self.log       = log
-        self.workers   = []
+        self.config  = config
+        self.log     = log
+        self.workers = []
 
 
     #=========================================================================
@@ -42,7 +35,7 @@ class Manager( object ):
         """
 
         req = json.loads( request )
-        res = { 'status' : 0 }
+        res = { 'status' : 'ok' }
         return json.dumps( res )
 
 
@@ -67,6 +60,16 @@ class Manager( object ):
         """
         """
 
+        pass
+
+
+    #=========================================================================
+    def _update_environment( self ):
+        """
+        """
+
+        # scan tasks directory and load driver docs into memory
+        #   used to check task requests and send task index
         pass
 
 
