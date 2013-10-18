@@ -11,9 +11,12 @@ import task
 
 
 class DevTask( task.Task ):
+    """
+    This is a task used for developmental purposes only.
+    """
 
-    @staticmethod
-    def getargs():
+    @classmethod
+    def getargs( cls ):
         return [
             {
                 "name" : "devarg",
@@ -28,6 +31,8 @@ class DevTask( task.Task ):
     def initialize( self ):
         self.report.progress = 0.0
         self.report.status = task.Report.INIT
+        self.report.message = 'devtask with devarg: %d' \
+            % self.arguments[ 'devarg' ]
         return self.report
 
     def process( self ):

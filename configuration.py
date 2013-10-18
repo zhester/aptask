@@ -146,10 +146,13 @@ class Configuration( object ):
             for symname in dir( module ):
                 if symname.lower() == modname:
                     ref = getattr( module, symname )
-                    index.append( {
-                        'name' : symname,
-                        'arguments' : ref.getargs()
-                    } )
+                    index.append(
+                        {
+                            'name'      : symname,
+                            'arguments' : ref.getargs(),
+                            'help'      : ref.gethelp()
+                        }
+                    )
 
         return index
 
@@ -250,6 +253,7 @@ def main( argv ):
 
     # return success
     return 0
+
 
 #=============================================================================
 if __name__ == "__main__":

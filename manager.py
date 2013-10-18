@@ -17,16 +17,19 @@ class Manager( object ):
 
 
     #=========================================================================
-    def __init__( self, config, log ):
+    def __init__( self, config, logger ):
         """
         Constructor.
         @param config
-        @param log
+        @param logger
         """
 
-        self.config  = config
-        self.log     = log
-        self.workers = []
+        self.config     = config
+        self.log        = logger
+        self.task_index = None
+        self.workers    = []
+
+        self._update_environment()
 
 
     #=========================================================================
@@ -35,7 +38,49 @@ class Manager( object ):
         """
 
         req = json.loads( request )
-        res = { 'status' : 'ok' }
+
+        # ZIH - auth check request here
+
+        if 'request' not in req:
+            res = { 'status' : 'error', 'message' : 'unspecified request' }
+
+        elif req[ 'request' ] == 'index':
+            res = {
+                "status" : "ok",
+                "response" : "index",
+                "index" : self.task_index
+            }
+
+        elif req[ 'request' ] == 'start':
+            # ZIH - verify task name
+            # ZIH - allocate worker, determine portable ID
+            res = {
+                "status" : "ok",
+                "response" : "start",
+                # ZIH
+                "taskid" : 42
+            }
+
+        elif req[ 'request' ] == 'stop':
+            # ZIH - verify task ID, send abort
+            res = {
+                "status" : "ok",
+                "response" : "stop",
+                # ZIH
+                "taskid" : 42
+            }
+
+        elif req[ 'request' ] == 'active':
+            res = {
+                "status" : "ok",
+                "response" : "active",
+                # ZIH
+                "active" : []
+            }
+
+        else:
+            res = { 'status' : 'error', 'message' : 'invalid request' }
+
         return json.dumps( res )
 
 
@@ -68,9 +113,7 @@ class Manager( object ):
         """
         """
 
-        # scan tasks directory and load driver docs into memory
-        #   used to check task requests and send task index
-        pass
+        self.task_index = self.config.get_task_index()
 
 
 #=============================================================================
@@ -100,13 +143,20 @@ def main( argv ):
     @return             Exit code (0 = success)
     """
 
+    import configuration
+    import log
+    conf = configuration.load_configuration( 'aptaskd.json' )
+    logger = log.Log( conf.get_log_file() )
 
+    m = Manager( conf, logger )
+
+    print m.handle_request( '{"request":"index"}' )
 
     # return success
     return 0
+
 
 #=============================================================================
 if __name__ == "__main__":
     import sys
     sys.exit( main( sys.argv ) )
-

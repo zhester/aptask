@@ -161,7 +161,7 @@ def main( argv ):
         return 0
 
     # load configuration
-    config = load_configuration( args.config )
+    config = configuration.load_configuration( args.config )
 
     # check configuration
     if config is None:

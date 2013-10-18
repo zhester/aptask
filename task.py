@@ -9,6 +9,9 @@ long-running code or programs.
 """
 
 
+import inspect
+
+
 #=============================================================================
 class NotSupported( NotImplementedError ):
     """
@@ -92,13 +95,15 @@ class Task( object ):
         Constructor.
         """
 
-        self.arguments = arguments
+        self.arguments = None
         self.report    = Report()
+
+        self._load_args( arguments )
 
 
     #=========================================================================
-    @staticmethod
-    def getargs():
+    @classmethod
+    def getargs( cls ):
         """
         Retrieves the argument list for this task.
         An argument list is a list of dicts.  Each dict describes an argument
@@ -112,6 +117,19 @@ class Task( object ):
         """
 
         return []
+
+
+    #=========================================================================
+    @classmethod
+    def gethelp( cls ):
+        """
+        Retrieves any helpful information that should be sent to the user.
+        """
+
+        if cls is Task:
+            return '(Task description unavailable.)'
+
+        return inspect.getdoc( cls )
 
 
     #=========================================================================
@@ -148,6 +166,41 @@ class Task( object ):
         raise NotSupported()
 
 
+    #=========================================================================
+    def _load_args( self, args ):
+        """
+        """
+
+        self.arguments = {}
+
+        arg_list = self.getargs()
+
+        # ZIH - still need to check arg types and requirements
+
+        if type( args ) is dict:
+            arg_keys = args.keys()
+            for arg in arg_list:
+                key = arg[ 'name' ]
+                if key in arg_keys:
+                    # ZIH - formal argument
+                    self.arguments[ key ] = args[ key ]
+                elif 'default' in arg:
+                    self.arguments[ key ] = arg[ 'default' ]
+                else:
+                    # ZIH - informal argument
+                    self.arguments[ key ] = args[ key ]
+
+        elif type( args ) is list:
+            index = 0
+            for arg in arg_list:
+                key = arg[ 'name' ]
+                if index < len( args ):
+                    self.arguments[ key ] = args[ index ]
+                    index += 1
+                elif 'default' in arg:
+                    self.arguments[ key ] = arg[ 'default' ]
+
+
 #=============================================================================
 def main( argv ):
     """
@@ -156,7 +209,12 @@ def main( argv ):
     @return             Exit code (0 = success)
     """
 
-
+    import tasks.devtask
+    t = tasks.devtask.DevTask()
+    t._load_args( {} )
+    print t.arguments
+    #print t.gethelp()
+    #print Task.gethelp()
 
     # return success
     return 0
