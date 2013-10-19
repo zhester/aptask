@@ -9,6 +9,8 @@ Provides the top-level control and tracking of long-running worker processes.
 
 import json
 
+import worker
+
 
 #=============================================================================
 class Manager( object ):
@@ -27,7 +29,7 @@ class Manager( object ):
         self.config     = config
         self.log        = logger
         self.task_index = None
-        self.workers    = []
+        self.workers    = WorkerFIFO()
 
         self._update_environment()
 
@@ -53,22 +55,29 @@ class Manager( object ):
 
         elif req[ 'request' ] == 'start':
             # ZIH - verify task name
-            # ZIH - allocate worker, determine portable ID
+            task_id = self.workers.add( Worker( req ) )
             res = {
                 "status" : "ok",
                 "response" : "start",
-                # ZIH
-                "taskid" : 42
+                "taskid" : task_id
             }
 
         elif req[ 'request' ] == 'stop':
-            # ZIH - verify task ID, send abort
-            res = {
-                "status" : "ok",
-                "response" : "stop",
-                # ZIH
-                "taskid" : 42
-            }
+            wrkr = self.workers.remove( req[ 'taskid' ] )
+            if wrkr is None:
+                res = {
+                    "status" : "error",
+                    "response" : "stop",
+                    "taskid" : req[ 'taskid' ]
+                }
+            else:
+                wrkr.send_abort()
+                # ZIH - 'join' to worker process after response is sent
+                res = {
+                    "status" : "ok",
+                    "response" : "stop",
+                    "taskid" : req[ 'taskid' ]
+                }
 
         elif req[ 'request' ] == 'active':
             res = {
@@ -109,6 +118,17 @@ class Manager( object ):
 
 
     #=========================================================================
+    def _abort( self, id ):
+        """
+        """
+
+        for w in self.workers:
+            if w.id == id:
+                w.send_abort()
+                break
+
+
+    #=========================================================================
     def _update_environment( self ):
         """
         """
@@ -123,7 +143,7 @@ class Worker( object ):
 
 
     #=========================================================================
-    def __init__( self ):
+    def __init__( self, descriptor ):
         """
         Constructor.
         """
@@ -131,8 +151,67 @@ class Worker( object ):
         self.command_queue   = None
         self.process         = None
         self.status_queue    = None
-        self.task_descriptor = None
+        self.task_descriptor = descriptor
 
+
+    #=========================================================================
+    def send_abort( self ):
+        """
+        """
+
+        self.command_queue.send( worker.ABORT )
+
+
+#=============================================================================
+class WorkerFIFO( object ):
+    """
+    """
+
+
+    #=========================================================================
+    def __init__( self ):
+        """
+        Constructor.
+        """
+
+        self.next_id = 1
+        self.queue   = []
+        self.workers = {}
+
+
+    #=========================================================================
+    def add( self, wrkr ):
+        """
+        """
+
+        task_id = str( self.next_id )
+        self.next_id += 1
+        self.queue.append( task_id )
+        self.workers[ task_id ] = wrkr
+        return task_id
+
+
+    #=========================================================================
+    def remove( self, task_id = None ):
+        """
+        """
+
+        if task_id is None:
+            index = 0
+        else:
+            try:
+                index = self.queue.index( task_id )
+            except ValueError:
+                return None
+
+        try:
+            task_id = self.queue.pop( index )
+        except IndexError:
+            return None
+
+        wrkr = self.workers[ task_id ]
+        del self.workers[ task_id ]
+        return wrkr
 
 
 #=============================================================================

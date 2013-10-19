@@ -34,6 +34,9 @@ class Command( object ):
         self.id = command_id
 
 
+#=============================================================================
+ABORT = Command( Command.ABORT )
+
 
 #=============================================================================
 def create_task_descriptor( name, arguments ):
@@ -46,7 +49,7 @@ def create_task_descriptor( name, arguments ):
     """
 
     # for now, just use a dict
-    return { 'name' : name, 'args' : arguments }
+    return { 'name' : name, 'arguments' : arguments }
 
 
 #=============================================================================
@@ -124,7 +127,7 @@ def _create_task( descriptor ):
     class_ref = getattr( module, descriptor[ 'name' ] )
 
     # instantiate the class, and return it
-    return class_ref( descriptor[ 'args' ] )
+    return class_ref( descriptor[ 'arguments' ] )
 
 
 #=============================================================================
