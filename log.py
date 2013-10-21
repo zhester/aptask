@@ -163,6 +163,7 @@ class Log( object ):
             delete from %s
             """  % self.table_name
         )
+        self.db.commit()
 
 
     #=========================================================================
