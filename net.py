@@ -38,7 +38,7 @@ def net( pipe, address ):
     backlog = 5
 
     # set the maximum request payload size
-    max_request_size = 1024
+    max_request_size = 2048
 
     # create and configure the server socket
     sock = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
@@ -80,14 +80,18 @@ def net( pipe, address ):
                 # ZIH - not sure what i'm testing yet (none? empty string?)
                 if payload:
 
+                    print ' #>', payload
+
                     # send request to parent
                     request = Message( data = payload )
                     pipe.send( request )
 
                     # get response and send data to client
                     response = pipe.recv()
+
+                    print ' #<', response.data
+
                     ready.send( response.data )
-                    input.remove( ready )
 
                     # ZIH - this could be improved by not blocking on the
                     # pipe receive... would need to manage a list of sockets

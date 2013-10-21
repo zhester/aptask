@@ -39,7 +39,7 @@ class DevTask( task.Task ):
         if self.report.progress >= 1.0:
             self.report.status = task.Report.DONE
         else:
-            time.sleep( 0.25 )
+            time.sleep( 5.0 )
             self.report.progress += 0.1
             self.report.status = task.Report.RUNNING
         return self.report

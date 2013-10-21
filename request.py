@@ -28,7 +28,7 @@ class Request( object ):
 
         # attempt to parse request data
         try:
-            req = json.loads( request )
+            req = json.loads( string )
         except ValueError:
             self.valid_syntax = False
         else:

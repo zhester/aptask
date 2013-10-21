@@ -7,6 +7,7 @@ Asynchronous Parallel Task Execution Daemon Script
 __version__ = '0.0.0'
 
 
+import multiprocessing
 import os
 import signal
 import sys
@@ -14,6 +15,7 @@ import time
 
 import configuration
 import log
+import manager
 import net
 
 
@@ -63,7 +65,7 @@ def start( config ):
     )
 
     # create and start the task manager
-    man = Manager( config, logger )
+    man = manager.Manager( config, logger )
     man.start()
 
     # set running flag

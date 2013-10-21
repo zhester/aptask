@@ -55,8 +55,16 @@ class Manager( object ):
             # get worker object for this task ID
             wrkr = self.workers.get( task_id )
 
-            # convert report object into a dictionary, and make a copy
-            report = dict( wrkr.get_status().__dict__ )
+            # get the most recent task status
+            status = wrkr.get_status()
+
+            if status is not None:
+
+                # convert report object into a dictionary, and make a copy
+                report = dict( status.__dict__ )
+
+            else:
+                report = {}
 
             # add process state and task ID
             report[ 'state' ]  = 'active' if wrkr.is_active() else 'inactive'
@@ -89,7 +97,7 @@ class Manager( object ):
         else:
 
             # handle request for supported task index
-            elif req.request == 'index':
+            if req.request == 'index':
                 res = {
                     'status'   : 'ok',
                     'response' : 'index',
@@ -187,8 +195,13 @@ class Manager( object ):
                 # get latest status
                 status = wrkr.get_status()
 
+                # some workers never received a single update (sadface)
+                if status is None:
+                    wrkr.join()
+                    self.workers.remove( task_id )
+
                 # look for workers that are done and should be removed
-                if status.is_done() == True:
+                elif status.is_done() == True:
                     wrkr.join()
                     self.workers.remove( task_id )
 

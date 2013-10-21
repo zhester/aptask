@@ -25,7 +25,7 @@ class Command( object ):
 
 
     #=========================================================================
-    def __init__( self, command_id = Command.CONTINUE ):
+    def __init__( self, command_id = CONTINUE ):
         """
         Constructor.
         @param command_id
@@ -71,10 +71,10 @@ class Worker( multiprocessing.Process ):
         super( Worker, self ).__init__(
             target = worker,
             args   = ( self.command_queue, self.status_queue, descriptor ),
-            name   = 'aptask_worker'
+            name   = 'aptaskworker'
         )
 
-        self.state  = INIT
+        self.state  = Worker.INIT
         self.status = None
 
 
@@ -106,7 +106,7 @@ class Worker( multiprocessing.Process ):
         """
         """
 
-        return self.state == RUNNING
+        return self.state == Worker.RUNNING
 
 
     #=========================================================================
@@ -114,7 +114,7 @@ class Worker( multiprocessing.Process ):
         """
         """
 
-        self.state = RUNNING
+        self.state = Worker.RUNNING
         super( Worker, self ).start()
 
 
@@ -123,10 +123,10 @@ class Worker( multiprocessing.Process ):
         """
         """
 
-        if self.state == RUNNING:
+        if self.state == Worker.RUNNING:
             self.command_queue.send( ABORT )
 
-        self.state = STOPPING
+        self.state = Worker.STOPPING
 
 
 #=============================================================================

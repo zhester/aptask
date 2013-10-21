@@ -187,10 +187,10 @@ class Configuration( object ):
         auth = False
 
         if request in Configuration.commands_users:
-            if is_user( auth_key ) == True:
+            if self.is_user( auth_key ) == True:
                 auth = True
         elif request in Configuration.commands_admins:
-            if is_admin( auth_key ) == True:
+            if self.is_admin( auth_key ) == True:
                 auth = True
 
         return auth
