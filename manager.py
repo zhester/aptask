@@ -9,6 +9,7 @@ Provides the top-level control and tracking of long-running worker processes.
 
 import json
 
+import fifo
 import request
 import worker
 
@@ -31,7 +32,7 @@ class Manager( object ):
         self.log        = logger
         self.task_names = []
         self.task_index = []
-        self.workers    = WorkerFIFO()
+        self.workers    = fifo.WorkerFIFO()
 
         self._update_environment()
 
@@ -160,9 +161,9 @@ class Manager( object ):
             wrkr.get_status()
 
         # get all active task ids
-        task_ids = self.workers.active_ids()
+        task_ids = self.workers.get_task_ids( active = True )
 
-        # iterate over active workers
+        # iterate over active tasks
         for task_id in task_ids:
 
             # get worker object for this task ID
@@ -247,151 +248,6 @@ class Manager( object ):
 
         self.task_index = self.config.get_task_index()
         self.task_names = [ x[ 'name' ] for x in self.task_index ]
-
-
-#=============================================================================
-class WorkerFIFO( object ):
-    """
-    """
-
-
-    #=========================================================================
-    def __init__( self, num_procs = 1 ):
-        """
-        Constructor.
-        @param num_procs
-        """
-
-        self._iter_i   = 0
-        self.next_id   = 1
-        self.num_procs = num_procs
-        self.queue     = []
-        self.workers   = {}
-
-
-    #=========================================================================
-    def __iter__( self ):
-        """
-        """
-
-        self._iter_i = 0
-        return self
-
-
-    #=========================================================================
-    def active( self ):
-        """
-        Retrieve a tuple of all active worker objects.
-        @return
-        """
-
-        return tuple(
-            [ self.workers[ k ] for k in self.queue[ : self.num_procs ] ]
-        )
-
-
-    #=========================================================================
-    def active_ids( self ):
-        """
-        Retrieve a tuple of all active worker ids.
-        @return
-        """
-
-        return tuple( self.queue[ : self.num_procs ] )
-
-
-    #=========================================================================
-    def add( self, wrkr ):
-        """
-        Add a worker to the queue.
-        @param wrkr
-        @return
-        """
-
-        # determine a suitable task ID
-        task_id = str( self.next_id )
-        self.next_id += 1
-
-        # append the ID to the end of the queue
-        self.queue.append( task_id )
-
-        # add the worker object to the dictionary
-        self.workers[ task_id ] = wrkr
-
-        # return the task ID for this worker object
-        return task_id
-
-
-    #=========================================================================
-    def get( self, task_id ):
-        """
-        Get a worker object by task ID.
-        @param task_id
-        @return
-        """
-
-        # attempt to get object from dictionary
-        try:
-            wrkr = self.workers[ task_id ]
-        except KeyError:
-            return None
-
-        # return worker object
-        return wrkr
-
-
-    #=========================================================================
-    def get_task_ids( self ):
-        """
-        """
-
-        return list( self.queue )
-
-
-    #=========================================================================
-    def next( self ):
-        """
-        """
-
-        if self._iter_i >= len( self.workers ):
-            raise StopIteration
-
-        index = self._iter_i
-        self._iter_i += 1
-        return self.workers[ self.queue[ index ] ]
-
-
-    #=========================================================================
-    def remove( self, task_id = None ):
-        """
-        Remove a worker from the queue.
-        @param task_id
-        @return
-        """
-
-        # the default assumption is to remove the oldest worker (index = 0)
-        if task_id is None:
-            index = 0
-
-        # if the ID is specified, we have to search the queue for the index
-        else:
-            try:
-                index = self.queue.index( task_id )
-            except ValueError:
-                return None
-
-        # remove the worker from the queue
-        try:
-            task_id = self.queue.pop( index )
-        except IndexError:
-            return None
-
-        # retrieve the worker instance and delete it from the dictionary
-        wrkr = self.workers[ task_id ]
-        del self.workers[ task_id ]
-
-        # return the worker instance that was removed
-        return wrkr
 
 
 #=============================================================================
