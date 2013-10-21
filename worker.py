@@ -6,6 +6,7 @@ Worker Process
 
 
 import importlib
+import multiprocessing
 import Queue
 
 import task
@@ -36,6 +37,96 @@ class Command( object ):
 
 #=============================================================================
 ABORT = Command( Command.ABORT )
+
+
+#=============================================================================
+class Worker( multiprocessing.Process ):
+    """
+    Worker process interface object.
+    Instances of this object are intended to be used to control and interact
+    with worker processes from a parent process.  No memory is shared with the
+    worker process.
+    """
+
+
+    #=========================================================================
+    INIT     = 0                    # initialized, ready to run
+    RUNNING  = 1                    # running
+    STOPPING = 2                    # shutting down process
+
+
+    #=========================================================================
+    state_strings = ( 'initialized', 'running', 'stopping' )
+
+
+    #=========================================================================
+    def __init__( self, descriptor ):
+        """
+        Constructor.
+        """
+
+        self.command_queue = multiprocessing.Queue()
+        self.status_queue  = multiprocessing.Queue()
+
+        super( Worker, self ).__init__(
+            target = worker,
+            args   = ( self.command_queue, self.status_queue, descriptor ),
+            name   = 'aptask_worker'
+        )
+
+        self.state  = INIT
+        self.status = None
+
+
+    #=========================================================================
+    def get_status( self ):
+        """
+        """
+
+        # set invalid status to detect if there was a status update
+        status = None
+
+        # loop until the status queue is empty
+        while True:
+            try:
+                status = self.status_queue.get_nowait()
+            except Queue.Empty:
+                break
+
+        # check for an update
+        if status is not None:
+            self.status = status
+
+        # return most recent status update
+        return self.status
+
+
+    #=========================================================================
+    def is_active( self ):
+        """
+        """
+
+        return self.state == RUNNING
+
+
+    #=========================================================================
+    def start( self ):
+        """
+        """
+
+        self.state = RUNNING
+        super( Worker, self ).start()
+
+
+    #=========================================================================
+    def stop( self ):
+        """
+        """
+
+        if self.state == RUNNING:
+            self.command_queue.send( ABORT )
+
+        self.state = STOPPING
 
 
 #=============================================================================
@@ -83,18 +174,16 @@ def worker( command_queue, status_queue, task_descriptor ):
         try:
             command = command_queue.get_nowait()
         except Queue.Empty:
-            # if the queue is empty, continue processing/updating
             pass
         else:
-            if command is not None:
-                if command.id == Command.ABORT:
-                    try:
-                        report = tsk.abort()
-                    except task.NotSupported:
-                        pass
-                    # ZIH - we're putting too much trust in the driver to
-                    #  set the done status here... we should keep some local
-                    # state and time out if we keep processing
+            if command.id == Command.ABORT:
+                try:
+                    report = tsk.abort()
+                except task.NotSupported:
+                    pass
+                # ZIH - we're putting too much trust in the driver to
+                #  set the done status here... we should keep some local
+                # state and time out if we keep processing
 
         # spend time executing task
         try:
@@ -105,8 +194,6 @@ def worker( command_queue, status_queue, task_descriptor ):
         # send status and progress to manager
         try:
             status_queue.put_nowait( report )
-            # ZIH - i don't like the manager having to know anything about the
-            #   task module... might want to repackage the data
         except Queue.Full:
             pass
 
@@ -121,7 +208,7 @@ def _create_task( descriptor ):
     """
 
     # import the task module by name
-    module    = importlib.import_module( descriptor[ 'name' ].lower() )
+    module = importlib.import_module( descriptor[ 'name' ].lower() )
 
     # get the reference to the task driver class
     class_ref = getattr( module, descriptor[ 'name' ] )

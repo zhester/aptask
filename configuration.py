@@ -56,6 +56,11 @@ class Configuration( object ):
 
 
     #=========================================================================
+    commands_admins = ()
+    commands_users  = ( 'index', 'start', 'stop', 'active' )
+
+
+    #=========================================================================
     def __init__( self, config_file = None ):
         """
         """
@@ -173,6 +178,22 @@ class Configuration( object ):
 
         return auth_key in self._data[ 'keys' ][ 'admins' ]
 
+
+    #=========================================================================
+    def is_authorized( self, auth_key, request ):
+        """
+        """
+
+        auth = False
+
+        if request in Configuration.commands_users:
+            if is_user( auth_key ) == True:
+                auth = True
+        elif request in Configuration.commands_admins:
+            if is_admin( auth_key ) == True:
+                auth = True
+
+        return auth
 
     #=========================================================================
     def is_user( self, auth_key ):
