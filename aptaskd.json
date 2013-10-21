@@ -2,6 +2,7 @@
     "_see" : "INSTALL.md",
     "host" : "",
     "port" : 2142,
+    "loglevel" : 6,
     "directories" : {
         "tasks" : "tasks",
         "data" : "var"

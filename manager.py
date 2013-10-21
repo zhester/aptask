@@ -10,6 +10,7 @@ Provides the top-level control and tracking of long-running worker processes.
 import json
 
 import fifo
+import log
 import request
 import worker
 
@@ -88,10 +89,12 @@ class Manager( object ):
         # check basic request validity
         if req.is_valid() == False:
             res = { 'status' : 'error', 'message' : 'malformed request' }
+            self.log.log( log.CLIENT_ERROR, string )
 
         # check request authorization
         elif self.config.is_authorized( req.key, req.request ) == False:
             res = { 'status' : 'error', 'message' : 'invalid auth key' }
+            self.log.log( log.CLIENT_ERROR, string )
 
         # request is, basically, in good shape
         else:
@@ -103,6 +106,7 @@ class Manager( object ):
                     'response' : 'index',
                     'index'    : self.task_index
                 }
+                self.log.log( log.REQUEST, string, req.key )
 
             # handle request to start a new task
             elif req.request == 'start':
@@ -117,12 +121,14 @@ class Manager( object ):
                         'response' : 'start',
                         'taskid'   : task_id
                     }
+                    self.log.log( log.REQUEST, string, req.key )
                 else:
                     res = {
                         'status'   : 'error',
                         'response' : 'start',
                         'message'  : 'invalid task name'
                     }
+                    self.log.log( log.CLIENT_ERROR, string, req.key )
 
             # handle request to stop an active/queued task
             elif req.request == 'stop':
@@ -133,6 +139,7 @@ class Manager( object ):
                         'response' : 'stop',
                         'taskid'   : req.taskid
                     }
+                    self.log.log( log.CLIENT_ERROR, string, req.key )
                 else:
                     wrkr.stop()
                     res = {
@@ -140,6 +147,7 @@ class Manager( object ):
                         'response' : 'stop',
                         'taskid'   : req.taskid
                     }
+                    self.log.log( log.REQUEST, string, req.key )
 
             # handle request for all active tasks
             elif req.request == 'active':
@@ -148,13 +156,21 @@ class Manager( object ):
                     "response" : "active",
                     'active'   : self.get_active()
                 }
+                self.log.log( log.REQUEST, string, req.key )
 
             # unknown request command
             else:
                 res = { 'status' : 'error', 'message' : 'invalid request' }
+                self.log.log( log.CLIENT_ERROR, string, req.key )
+
+        # format the response
+        response = json.dumps( res )
+
+        # log the response
+        self.log.log( log.RESPONSE, response )
 
         # return a formatted response
-        return json.dumps( res )
+        return response
 
 
     #=========================================================================
@@ -180,6 +196,7 @@ class Manager( object ):
             # look for workers that can be started (should be abstracted)
             if wrkr.state == worker.Worker.INIT:
                 wrkr.start()
+                self.log.log( log.TASKING, 'starting task %d' % task_id )
 
             # look for workers that have been stopped
             elif wrkr.state == worker.Worker.STOPPING:
@@ -188,6 +205,7 @@ class Manager( object ):
                 if wrkr.is_alive() == False:
                     wrkr.join()
                     self.workers.remove( task_id )
+                    self.log.log( log.TASKING, 'stopping task %d' % task_id )
 
             # look for active worker status transitions
             else:
@@ -199,12 +217,13 @@ class Manager( object ):
                 if status is None:
                     wrkr.join()
                     self.workers.remove( task_id )
+                    self.log.log( log.TASKING, 'stopping task %d' % task_id )
 
                 # look for workers that are done and should be removed
                 elif status.is_done() == True:
                     wrkr.join()
                     self.workers.remove( task_id )
-
+                    self.log.log( log.TASKING, 'stopping task %d' % task_id )
 
     #=========================================================================
     def start( self ):

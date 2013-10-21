@@ -251,6 +251,9 @@ class Configuration( object ):
         if os.access( dirs[ 'tasks' ], ( os.R_OK | os.X_OK ) ) == False:
             raise VerificationError()
 
+        if 'loglevel' not in self._data:
+            self._data[ 'loglevel' ] = 1
+
 
 #=============================================================================
 def main( argv ):

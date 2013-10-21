@@ -51,7 +51,7 @@ def start( config ):
     sys.path.append( config.get_path( 'tasks' ) )
 
     # initialize the logging facility
-    logger = log.Log( config.get_log_file() )
+    logger = log.Log( config.get_log_file(), config.loglevel )
     logger.append_message( 'initializing daemon' )
 
     # create the network server control pipe
