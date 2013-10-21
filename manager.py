@@ -39,56 +39,67 @@ class Manager( object ):
         """
         """
 
-        req = json.loads( request )
+        try:
+            req = json.loads( request )
+        except ValueError:
+            res = { 'status' : 'error', 'message' : 'malformed request' }
 
-        # ZIH - auth check request here
+        # ZIH - move auth check and incorporate type of request
 
-        if 'request' not in req:
-            res = { 'status' : 'error', 'message' : 'unspecified request' }
+        if 'key' not in req:
+            res = { 'status' : 'error', 'message' : 'unspecified auth key' }
 
-        elif req[ 'request' ] == 'index':
-            res = {
-                "status" : "ok",
-                "response" : "index",
-                "index" : self.task_index
-            }
-
-        elif req[ 'request' ] == 'start':
-            # ZIH - verify task name
-            task_id = self.workers.add( Worker( req ) )
-            res = {
-                "status" : "ok",
-                "response" : "start",
-                "taskid" : task_id
-            }
-
-        elif req[ 'request' ] == 'stop':
-            wrkr = self.workers.remove( req[ 'taskid' ] )
-            if wrkr is None:
-                res = {
-                    "status" : "error",
-                    "response" : "stop",
-                    "taskid" : req[ 'taskid' ]
-                }
-            else:
-                wrkr.send_abort()
-                # ZIH - 'join' to worker process after response is sent
-                res = {
-                    "status" : "ok",
-                    "response" : "stop",
-                    "taskid" : req[ 'taskid' ]
-                }
-
-        elif req[ 'request' ] == 'active':
-            res = {
-                "status" : "ok",
-                "response" : "active",
-                # ZIH
-                "active" : []
-            }
+        elif self.config.is_user( req[ 'key' ] ) == False:
+            res = { 'status' : 'error', 'message' : 'invalid auth key' }
 
         else:
-            res = { 'status' : 'error', 'message' : 'invalid request' }
+
+            if 'request' not in req:
+                res = { 'status' : 'error', 'message' : 'unspecified request' }
+
+            elif req[ 'request' ] == 'index':
+                res = {
+                    "status" : "ok",
+                    "response" : "index",
+                    "index" : self.task_index
+                }
+
+            elif req[ 'request' ] == 'start':
+                # ZIH - verify task name
+                task_id = self.workers.add( Worker( req ) )
+                res = {
+                    "status" : "ok",
+                    "response" : "start",
+                    "taskid" : task_id
+                }
+
+            elif req[ 'request' ] == 'stop':
+                wrkr = self.workers.remove( req[ 'taskid' ] )
+                if wrkr is None:
+                    res = {
+                        "status" : "error",
+                        "response" : "stop",
+                        "taskid" : req[ 'taskid' ]
+                    }
+                else:
+                    wrkr.send_abort()
+                    # ZIH - 'join' to worker process after response is sent
+                    res = {
+                        "status" : "ok",
+                        "response" : "stop",
+                        "taskid" : req[ 'taskid' ]
+                    }
+
+            elif req[ 'request' ] == 'active':
+                res = {
+                    "status" : "ok",
+                    "response" : "active",
+                    # ZIH
+                    "active" : []
+                }
+
+            else:
+                res = { 'status' : 'error', 'message' : 'invalid request' }
 
         return json.dumps( res )
 
