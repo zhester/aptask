@@ -92,6 +92,7 @@ def net( pipe, address ):
                     print ' #<', response.data
 
                     ready.send( response.data )
+                    input.remove( ready )
 
                     # ZIH - this could be improved by not blocking on the
                     # pipe receive... would need to manage a list of sockets

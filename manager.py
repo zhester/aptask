@@ -196,7 +196,7 @@ class Manager( object ):
             # look for workers that can be started (should be abstracted)
             if wrkr.state == worker.Worker.INIT:
                 wrkr.start()
-                self.log.log( log.TASKING, 'starting task %d' % task_id )
+                self.log.log( log.TASKING, 'starting task %s' % task_id )
 
             # look for workers that have been stopped
             elif wrkr.state == worker.Worker.STOPPING:
@@ -205,7 +205,7 @@ class Manager( object ):
                 if wrkr.is_alive() == False:
                     wrkr.join()
                     self.workers.remove( task_id )
-                    self.log.log( log.TASKING, 'stopping task %d' % task_id )
+                    self.log.log( log.TASKING, 'stopping task %s' % task_id )
 
             # look for active worker status transitions
             else:
@@ -217,13 +217,13 @@ class Manager( object ):
                 if status is None:
                     wrkr.join()
                     self.workers.remove( task_id )
-                    self.log.log( log.TASKING, 'stopping task %d' % task_id )
+                    self.log.log( log.TASKING, 'stopping task %s' % task_id )
 
                 # look for workers that are done and should be removed
                 elif status.is_done() == True:
                     wrkr.join()
                     self.workers.remove( task_id )
-                    self.log.log( log.TASKING, 'stopping task %d' % task_id )
+                    self.log.log( log.TASKING, 'stopping task %s' % task_id )
 
     #=========================================================================
     def start( self ):

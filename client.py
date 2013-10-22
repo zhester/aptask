@@ -29,11 +29,6 @@ class Client( object ):
         self.address = address
         self.key     = key
 
-        # create a TCP socket object
-        self.sock = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
-        self.sock.settimeout( 5.0 )
-        self.sock.connect( self.address )
-
 
     #=========================================================================
     def __del__( self ):
@@ -41,7 +36,7 @@ class Client( object ):
         Destructor.
         """
 
-        self.sock.close()
+        pass
 
 
     #=========================================================================
@@ -75,13 +70,21 @@ class Client( object ):
         if type( request ) is dict:
             request = json.dumps( request )
 
-        self.sock.sendall( request )
+        # create a TCP socket object
+        sock = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
+        sock.settimeout( 5.0 )
+        sock.connect( self.address )
+
+        sock.sendall( request )
 
         try:
-            response = self.sock.recv( 4096 )
+            response = sock.recv( 4096 )
         except socket.timeout:
+            sock.close()
             print 'receive timed out'
             return None
+
+        sock.close()
 
         try:
             res = json.loads( response )
@@ -151,7 +154,7 @@ def main( argv ):
 
     devtask = index[ 'index' ][ 0 ][ 'name' ]
 
-    for devarg in range( 4 ):
+    for devarg in range( 1 ):
         result = client.start_task( devtask, ( devarg, ) )
         #print json.dumps( result, **pp )
 
