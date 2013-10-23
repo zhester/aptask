@@ -72,7 +72,7 @@ class Client( object ):
 
         # create a TCP socket object
         sock = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
-        sock.settimeout( 5.0 )
+        sock.settimeout( 60.0 )
         sock.connect( self.address )
 
         sock.sendall( request )

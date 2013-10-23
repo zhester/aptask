@@ -54,7 +54,7 @@ def start( config ):
     logger = log.Log( config.get_log_file(), config.loglevel )
     logger.append_message( 'initializing daemon' )
 
-    # create the network server control pipe
+    # create the network server control and communications pipe
     ( p_pipe, c_pipe ) = multiprocessing.Pipe( True )
 
     # create network server in its own process
@@ -80,17 +80,19 @@ def start( config ):
         # check for requests from netd
         if p_pipe.poll() == True:
 
-            # get message, handle, and send response
+            # get message data and send to message handler
             message = p_pipe.recv()
+            print ' #>', message.sid
             message.data = man.handle_request( message.data )
+            print ' #<', message.sid
             p_pipe.send( message )
 
         # allow manager to process worker queues
         man.process()
 
         # poll interval (may not be needed, or could be adaptive)
-        if _is_running == True:
-            time.sleep( 0.005 )
+        #if _is_running == True:
+        #    time.sleep( 0.005 )
 
     # shut down task manager
     man.stop()

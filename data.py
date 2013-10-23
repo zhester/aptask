@@ -26,8 +26,7 @@ class Data( object ):
     def __init__( self, **kwargs ):
         """
         Constructor.
-        @param *args    Anything, everything, or nothing
-        @param **kwargs Anything, everything, or nothing
+        @param **kwargs Anything or everything, but not nothing
         """
 
         # check for secret handshake
@@ -114,6 +113,7 @@ class Data( object ):
         """
 
         self.__dict__.update( data )
+        self._keys = data.keys()
 
 
     #=========================================================================
