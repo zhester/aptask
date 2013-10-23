@@ -12,14 +12,15 @@ simultaneous clients.
 import select
 import socket
 
+import data
+
 
 #=============================================================================
-class Message( object ):
+class Message( data.Data ):
     DATA = 1
     QUIT = 86
-    def __init__( self, id = DATA, data = None ):
-        self.id   = id
-        self.data = data
+    def __init__( self, sid, mid = DATA, data = None ):
+        self.super_init( vars() )
 
 
 #=============================================================================

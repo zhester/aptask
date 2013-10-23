@@ -7,6 +7,8 @@ Event Log Interface
 
 import sqlite3
 
+import data
+
 
 #=============================================================================
 UNSPECIFIED  = 0
@@ -32,7 +34,7 @@ level_strings = (
 
 
 #=============================================================================
-class Event( object ):
+class Event( data.Data ):
     """
     """
 
@@ -48,10 +50,8 @@ class Event( object ):
         """
         """
 
-        self.message   = message
-        self.level     = level
-        self.authkey   = authkey
-        self.timestamp = timestamp
+        # load constructor parameters into object state
+        self.super_init( vars() )
 
 
     #=========================================================================
@@ -84,7 +84,7 @@ class Log( object ):
 
         self.db_file        = db_file
         self.db             = sqlite3.connect( self.db_file )
-        self.db.row_factory = self._row_factory
+        self.db.row_factory = sqlite3.Row
         self.is_open        = True
         self.max_level      = max_level
         self._check_schema()
@@ -202,8 +202,8 @@ class Log( object ):
         )
 
         events = []
-        for event in cursor.fetchall():
-            events.append( Event( **event ) )
+        for row in cursor.fetchall():
+            events.append( Event( **dict( zip( row.keys(), row ) ) ) )
 
         return events
 
@@ -240,17 +240,6 @@ class Log( object ):
                 )
                 """ % self.table_name
             )
-
-
-    #=========================================================================
-    def _row_factory( self, cursor, row ):
-        """
-        """
-
-        d = {}
-        for index, column in enumerate( cursor.description ):
-            d[ column[ 0 ] ] = row[ index ]
-        return d
 
 
 #=============================================================================

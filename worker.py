@@ -10,10 +10,11 @@ import multiprocessing
 import Queue
 
 import task
+import data
 
 
 #=============================================================================
-class Command( object ):
+class Command( data.Data ):
     """
     Worker control command.
     """
@@ -32,7 +33,7 @@ class Command( object ):
                         Command identifier
         """
 
-        self.id = command_id
+        self.super_init( vars() )
 
 
 #=============================================================================
