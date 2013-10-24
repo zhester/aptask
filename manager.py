@@ -213,17 +213,12 @@ class Manager( object ):
                 # get latest status
                 status = wrkr.get_status()
 
-                # some workers never received a single update (sadface)
-                if status is None:
+                # look for workers that are done and should be removed
+                if ( status is not None ) and ( status.is_done() == True ):
                     wrkr.join()
                     self.workers.remove( task_id )
                     self.log.log( log.TASKING, 'stopping task %s' % task_id )
 
-                # look for workers that are done and should be removed
-                elif status.is_done() == True:
-                    wrkr.join()
-                    self.workers.remove( task_id )
-                    self.log.log( log.TASKING, 'stopping task %s' % task_id )
 
     #=========================================================================
     def start( self ):

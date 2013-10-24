@@ -149,14 +149,17 @@ def main( argv ):
         'separators' : ( ',', ' : ' )
     }
 
-    index = client.get_task_index()
+    # example of fetching the task index
+    #index = client.get_task_index()
     #print json.dumps( index, **pp )
+    #devtask = index[ 'index' ][ 0 ][ 'name' ]
 
-    devtask = index[ 'index' ][ 0 ][ 'name' ]
+    devtask = 'DevTask'
 
-    for devarg in range( 1 ):
-        result = client.start_task( devtask, ( devarg, ) )
-        #print json.dumps( result, **pp )
+    if len( argv ) > 1:
+        start = int( argv[ 1 ] )
+        for devarg in range( start ):
+            result = client.start_task( devtask, ( devarg, ) )
 
     active = client.get_active_tasks()
     print json.dumps( active, **pp )

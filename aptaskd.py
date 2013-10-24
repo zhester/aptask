@@ -82,9 +82,7 @@ def start( config ):
 
             # get message data and send to message handler
             message = p_pipe.recv()
-            print ' #>', message.sid
             message.data = man.handle_request( message.data )
-            print ' #<', message.sid
             p_pipe.send( message )
 
         # allow manager to process worker queues
