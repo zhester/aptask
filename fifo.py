@@ -5,9 +5,16 @@ Worker/Task FIFO Queue
 """
 
 
+import raqueue
+
+
 #=============================================================================
-class WorkerFIFO( object ):
+class WorkerFIFO( raqueue.RandomAccessQueue ):
     """
+    Implements a FIFO queue to ensure first-come, first-served task execution.
+    Additionally, this allows random access to all items in the queue to allow
+    a user to check on status, and execute multiple simultaneous tasks without
+    removing them from the queue.
     """
 
 
@@ -16,23 +23,24 @@ class WorkerFIFO( object ):
         """
         Constructor.
         @param num_procs
+                        Maximum number of concurrent worker processes
         """
 
-        self._iter_i   = 0
-        self.next_id   = 1
+        super( WorkerFIFO, self ).__init__()
+
+        self._iter     = 0
         self.num_procs = num_procs
-        self.queue     = []
-        self.workers   = {}
+        self.fifo      = []
 
 
     #=========================================================================
     def __iter__( self ):
         """
-        Get iterator instance.
-        @return
+        Iterator protocol support.
+        @return         Iterable object
         """
 
-        self._iter_i = 0
+        self._iter = 0
         return self
 
 
@@ -40,77 +48,55 @@ class WorkerFIFO( object ):
     def add( self, wrkr ):
         """
         Add a worker to the queue.
-        @param wrkr
-        @return
+        @param wrkr     Worker object to enqueue
+        @return         Assigned task ID
         """
 
-        # determine a suitable task ID
-        task_id = str( self.next_id )
-        self.next_id += 1
+        # enqueue the worker object
+        task_id = super( WorkerFIFO, self ).add( wrkr )
 
         # append the ID to the end of the queue
-        self.queue.append( task_id )
-
-        # add the worker object to the dictionary
-        self.workers[ task_id ] = wrkr
+        self.fifo.append( task_id )
 
         # return the task ID for this worker object
         return task_id
 
 
     #=========================================================================
-    def get( self, task_id ):
-        """
-        Get a worker object by task ID.
-        @param task_id
-        @return
-        """
-
-        # attempt to get object from dictionary
-        try:
-            wrkr = self.workers[ task_id ]
-        except KeyError:
-            return None
-
-        # return worker object
-        return wrkr
-
-
-    #=========================================================================
     def get_task_ids( self, active = False ):
         """
         Get list of task IDs in the queue.
-        @param active
-        @return
+        @param active   Set this option to only retrieve active task IDs
+        @return         A list of task IDs in the queue
         """
 
         if active == True:
-            return self.queue[ : self.num_procs ]
+            return self.fifo[ : self.num_procs ]
 
-        return list( self.queue )
+        return list( self.fifo )
 
 
     #=========================================================================
     def next( self ):
         """
-        Support for iterator protocol.
-        @return
+        Iterator protocol support.
+        @return         Next worker in queue
         """
 
-        if self._iter_i >= len( self.workers ):
+        if self._iter >= len( self.fifo ):
             raise StopIteration
 
-        index = self._iter_i
-        self._iter_i += 1
-        return self.workers[ self.queue[ index ] ]
+        task_id = self.fifo[ self._iter ]
+        self._iter += 1
+        return self[ task_id ]
 
 
     #=========================================================================
     def remove( self, task_id = None ):
         """
         Remove a worker from the queue.
-        @param task_id
-        @return
+        @param task_id  The task ID to remove
+        @return         The worker object that was removed
         """
 
         # the default assumption is to remove the oldest worker (index = 0)
@@ -120,22 +106,18 @@ class WorkerFIFO( object ):
         # if the ID is specified, we have to search the queue for the index
         else:
             try:
-                index = self.queue.index( task_id )
+                index = self.fifo.index( task_id )
             except ValueError:
                 return None
 
         # remove the worker from the queue
         try:
-            task_id = self.queue.pop( index )
+            task_id = self.fifo.pop( index )
         except IndexError:
             return None
 
-        # retrieve the worker instance and delete it from the dictionary
-        wrkr = self.workers[ task_id ]
-        del self.workers[ task_id ]
-
-        # return the worker instance that was removed
-        return wrkr
+        # dequeue the worker object
+        return super( WorkerFIFO, self ).remove( task_id )
 
 
 #=============================================================================

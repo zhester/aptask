@@ -9,8 +9,9 @@ import importlib
 import multiprocessing
 import Queue
 
-import task
 import data
+import task
+import watchdog
 
 
 #=============================================================================
@@ -61,27 +62,36 @@ class Worker( multiprocessing.Process ):
 
 
     #=========================================================================
-    def __init__( self, descriptor ):
+    def __init__( self, descriptor, authkey = None ):
         """
         Constructor.
+        @param descriptor
+                        Task execution descriptor
+        @param authkey  Task owner's authentication key
         """
 
+        # create the IPC message queues
         self.command_queue = multiprocessing.Queue()
         self.status_queue  = multiprocessing.Queue()
 
+        # initialize the parent
         super( Worker, self ).__init__(
             target = worker,
             args   = ( self.command_queue, self.status_queue, descriptor ),
             name   = 'aptaskworker'
         )
 
-        self.state  = Worker.INIT
-        self.status = None
+        # initialize object state
+        self.authkey = authkey
+        self.state   = Worker.INIT
+        self.status  = None
 
 
     #=========================================================================
     def get_status( self ):
         """
+        Get the latest status for this task.
+        @return         A Report object describing the status
         """
 
         # set invalid status to detect if there was a status update
@@ -105,6 +115,8 @@ class Worker( multiprocessing.Process ):
     #=========================================================================
     def is_active( self ):
         """
+        Check to see if the worker is actively processing its task.
+        @return         True if the worker is active
         """
 
         return self.state == Worker.RUNNING
@@ -113,6 +125,7 @@ class Worker( multiprocessing.Process ):
     #=========================================================================
     def start( self ):
         """
+        Start executing the task.
         """
 
         self.state = Worker.RUNNING
@@ -122,6 +135,7 @@ class Worker( multiprocessing.Process ):
     #=========================================================================
     def stop( self ):
         """
+        Stop executing the task.
         """
 
         if self.state == Worker.RUNNING:
@@ -148,13 +162,15 @@ def create_task_descriptor( name, arguments ):
 def worker( command_queue, status_queue, task_descriptor ):
     """
     Function to execute as a worker process.
-    @param
-    @param
-    @param
+    @param command_queue
+                        IPC command queue from parent process
+    @param status_queue IPC status queue to parent process
+    @param task_descriptor
+                        Task descriptor
     """
 
-    command = None
-    report  = None
+    # set up a watchdog timer
+    dog = watchdog.Timer()
 
     # create the task object according to the descriptor
     tsk = _create_task( task_descriptor )
@@ -166,10 +182,14 @@ def worker( command_queue, status_queue, task_descriptor ):
     try:
         report = tsk.initialize()
     except task.NotSupported:
-        pass
+        report = task.Report()
 
     # loop until the task reports completion
     while report.is_done() == False:
+
+        # check the watchdog timer for a timeout after a stuck abort
+        if dog.check() == False:
+            break
 
         # check for any pending messages
         try:
@@ -177,16 +197,26 @@ def worker( command_queue, status_queue, task_descriptor ):
         except Queue.Empty:
             pass
         else:
+
+            # check for an abort command
             if command.id == Command.ABORT:
+
+                # try to abort the task
                 try:
                     report = tsk.abort()
+
+                # not supported, just stop processing
                 except task.NotSupported:
-                    pass
-                # ZIH - we're putting too much trust in the driver to
-                #  set the done status here... we should keep some local
-                # state and time out if we keep processing
+                    break
+
+                # start a timer to make sure we abort the process
+                else:
+                    dog.start()
 
         # spend time executing task
+        #   some tasks will quickly update status here
+        #   some tasks will block here until complete
+        #   some tasks won't implement this
         try:
             report = tsk.process()
         except task.NotSupported:
@@ -205,7 +235,6 @@ def _create_task( descriptor ):
     Creates a task object from a descriptor.
     @param descriptor   Task descriptor
     @return             Task instance
-    ###@throws ValueError  When the descriptor can not be resolved
     """
 
     # import the task module by name

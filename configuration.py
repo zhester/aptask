@@ -16,6 +16,8 @@ import sys
 def load_configuration( filename ):
     """
     Load configuration from a file.
+    @param filename     The name of the file where the configuration is stored
+    @return             A populated Configuration object
     """
 
     try:

@@ -14,28 +14,30 @@ a few miliseconds to less than one second.
 
 import time
 
+import raqueue
 
-class SessionQueue( object ):
 
-    def __init__( self ):
-        self.next_id  = 1
-        self.sessions = {}
+#=============================================================================
+class SessionQueue( raqueue.RandomAccessQueue ):
+    """
+    Simplifies the process of adding network-specific information to a queue.
+    """
 
-    def __getitem__( self, key ):
-        return self.sessions[ key ]
 
-    def __len__( self ):
-        return len( self.sessions )
-
+    #=========================================================================
     def add( self, address, sock ):
-        data = vars()
-        data[ 'time' ] = time.time()
-        sid = str( self.next_id )
-        self.next_id += 1
-        self.sessions[ sid ] = data
-        return sid
+        """
+        Adds a new session entry to the queue.
+        @param address  The standard network address value (tuple)
+        @param sock     The connection's socket instance/descriptor/handle
+        @return         The assigned session ID
+        """
 
-    def remove( self, sid ):
-        data = self.sessions[ sid ]
-        del self.sessions[ sid ]
-        return data
+        # get parameters as a dictionary
+        data = vars()
+
+        # store the start time of the session
+        data[ 'time' ] = time.time()
+
+        # add the session data to the queue, and return the session ID
+        return super( SessionQueue, self ).add( data )

@@ -124,6 +124,8 @@ client are requests.  Messages sent from a server are responses.
             {
                 "taskid" : "<taskid>",
                 "status" : "<status>",
+                "state" : "<state>",
+                "position" : "<position>",
                 "progress" : "<progress>",
                 "message" : "<message>"
             }

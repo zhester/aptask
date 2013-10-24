@@ -23,6 +23,7 @@ class Message( data.Data ):
     IPC Message Definition
     """
 
+
     #=========================================================================
     DATA = 1                        # message contains data
     QUIT = 86                       # message indicates process shutdown
@@ -75,7 +76,7 @@ def net( pipe, address ):
     is_running = True
 
     # daemon loop
-    while( is_running == True ):
+    while is_running == True:
 
         # select next connection with available data
         try:

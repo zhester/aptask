@@ -11,6 +11,8 @@ long-running code or programs.
 
 import inspect
 
+import data
+
 
 #=============================================================================
 class NotSupported( NotImplementedError ):
@@ -31,7 +33,7 @@ class NotSupported( NotImplementedError ):
 
 
 #=============================================================================
-class Report( object ):
+class Report( data.Data ):
     """
     The object sent to the worker when reporting the status and progress of
     a task.
@@ -50,23 +52,16 @@ class Report( object ):
 
 
     #=========================================================================
-    def __init__( self ):
+    def __init__( self, status = INIT, progress = 0.0, message = None ):
         """
         Constructor.
+        @param status   Current task status (ERROR, INIT, RUNNING, DONE)
+        @param progress Current task progress (0.0 to 1.0)
+        @param message  User-friendly message about progress (string)
         """
 
-        self.message  = None
-        self.progress = 0.0
-        self.status   = self.INIT
-
-
-    #=========================================================================
-    def __str__( self ):
-        """
-        String casting.
-        """
-
-        return self.message
+        # load arguments into object state
+        self.super_init( vars() )
 
 
     #=========================================================================
@@ -89,7 +84,7 @@ class Task( object ):
         getargs         Used to describe acceptable arguments
         initialize      Called to initialize or start the task
         process         Called iteratively until the task is complete
-    These three methods must all return a Report object.
+    abort, initialize, and process must all return a Report object.
     """
 
 
@@ -97,12 +92,13 @@ class Task( object ):
     def __init__( self, arguments = None ):
         """
         Constructor.
+        @param arguments
+                        Argument values requested for task execution
         """
 
-        self.arguments = None
-        self.report    = Report()
-
-        self._load_args( arguments )
+        self.arguments       = None
+        self.report          = Report()
+        self.valid_arguments = self._load_args( arguments )
 
 
     #=========================================================================
@@ -173,36 +169,100 @@ class Task( object ):
     #=========================================================================
     def _load_args( self, args ):
         """
+        Load given arguments into object state.
+        @param args     List or dict of requested argument values
         """
 
-        self.arguments = {}
+        # flag to indicate valid argument input
+        result = True
 
-        arg_list = self.getargs()
+        # build a list of arguments expected by this task driver
+        self._arg_list = self.getargs()
 
-        # ZIH - still need to check arg types and requirements
+        # build a lookup table of known arguments
+        self._arg_table = dict( ( a[ 'name' ], a ) for a in self._arg_list )
 
+        # create a dictionary to keep the argument values and set defaults
+        self.arguments = dict(
+            ( a[ 'name' ], a[ 'default' ] )
+                for a in self._arg_list
+                    if 'default' in a
+        )
+
+        # handle dictionary input
         if type( args ) is dict:
-            arg_keys = args.keys()
-            for arg in arg_list:
-                key = arg[ 'name' ]
-                if key in arg_keys:
-                    # ZIH - formal argument
-                    self.arguments[ key ] = args[ key ]
-                elif 'default' in arg:
-                    self.arguments[ key ] = arg[ 'default' ]
-                else:
-                    # ZIH - informal argument
-                    self.arguments[ key ] = args[ key ]
 
+            # use our known arguments to extract values into the object
+            for key, arg in self._arg_table.items():
+
+                # see if the input specified this argument
+                if key in args:
+                    if self._load_arg( key, args[ key ] ) == False:
+                        result = False
+
+        # handle list input
         elif type( args ) is list:
+
+            # argument value list index
             index = 0
-            for arg in arg_list:
-                key = arg[ 'name' ]
+
+            # use our known arguments to extract values into the object
+            for key, arg in self._arg_table.items():
+
+                # see if the input specified this argument
                 if index < len( args ):
-                    self.arguments[ key ] = args[ index ]
+                    if self._load_arg( key, args[ index ] ) == False:
+                        result = False
                     index += 1
-                elif 'default' in arg:
-                    self.arguments[ key ] = arg[ 'default' ]
+
+        # make sure all required arguments were specified
+        reqs = [ a[ 'name' ] for a in self._arg_list if 'required' in a ]
+        keys = self.arguments.keys()
+
+        # the difference between two sets should be an empty set if the entire
+        #   first set is a subset of the second set
+        num_diff = len( set( reqs ) - set( keys ) )
+        if num_diff != 0:
+            result = False
+
+        # return status of argument loading
+        return result
+
+
+    #=========================================================================
+    def _load_arg( self, key, value ):
+        """
+        Load a given argument into object state.
+        @param key      Name of argument to load
+        @param value    Value to load
+        @return         True if successfully loaded
+        """
+
+        # check key against table of arguments
+        if key not in self._arg_table:
+            return False
+
+        # reference the argument specifier
+        spec = self._arg_table[ key ]
+
+        # determine argument type
+        if 'default' in spec:
+            type_name = type( spec[ 'default' ] ).__name__
+        elif 'type' in spec:
+            type_name = spec[ 'type' ]
+        else:
+            type_name = 'str'
+
+        # pull name of type of value
+        value_type_name = type( value ).__name__
+
+        # validate argument type
+        if value_type_name != type_name:
+            return False
+
+        # store value in object state
+        self.arguments[ key ] = value
+        return True
 
 
 #=============================================================================

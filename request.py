@@ -43,8 +43,8 @@ class Request( object ):
     def __getattr__( self, key ):
         """
         Silently handle missing attributes.
-        @param key
-        @return
+        @param key      Request field key to retrieve
+        @return         None
         """
 
         return None
@@ -54,6 +54,7 @@ class Request( object ):
     def is_valid( self ):
         """
         Checks if the request is valid for processing.
+        @return         True if the request appears valid
         """
 
         if ( self.valid_syntax == True ) and ( self.request is not None ):

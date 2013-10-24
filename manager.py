@@ -18,6 +18,8 @@ import worker
 #=============================================================================
 class Manager( object ):
     """
+    Implements handling outside requests and managing tasking resources to
+    fulfill those requests.
     """
 
 
@@ -31,21 +33,27 @@ class Manager( object ):
 
         self.config     = config
         self.log        = logger
-        self.task_names = []
         self.task_index = []
+        self.task_names = []
         self.workers    = fifo.WorkerFIFO()
 
         self._update_environment()
 
 
     #=========================================================================
-    def get_active( self ):
+    def get_active( self, authkey = None ):
         """
+        Retrieves a list of dicts that reports the current status of all
+        active tasks.
+        @param authkey  Specify to restrict list to tasks owned by that user
+        @return         A list of dicts describing the active tasks
         """
 
-        # ZIH - need to support auth-key-based "session" lists
-
+        # set up a list to populate
         active = []
+
+        # set up a queue position index
+        position = -1
 
         # get a list of all task IDs
         task_ids = self.workers.get_task_ids()
@@ -53,23 +61,38 @@ class Manager( object ):
         # iterate over all workers in queue
         for task_id in task_ids:
 
+            # increment position index
+            position += 1
+
             # get worker object for this task ID
-            wrkr = self.workers.get( task_id )
+            wrkr = self.workers[ task_id ]
+
+            # check to see if this worker is for the given auth key
+            if ( authkey is not None ) and ( wrkr.authkey != authkey ):
+
+                # do not report on other user's tasks
+                continue
 
             # get the most recent task status
             status = wrkr.get_status()
 
+            # make sure the worker has a status to report
             if status is not None:
 
-                # convert report object into a dictionary, and make a copy
-                report = dict( status.__dict__ )
+                # get a copy of the report object as a dictionary
+                report = status.__getstate__()
 
+            # the worker does not have a meaningful status to report
             else:
                 report = {}
 
-            # add process state and task ID
-            report[ 'state' ]  = 'active' if wrkr.is_active() else 'inactive'
-            report[ 'taskid' ] = task_id
+            # add position, process state, and task ID
+            report[ 'position' ] = position
+            report[ 'taskid' ]   = task_id
+            if wrkr.is_active() == True:
+                report[ 'state' ] = 'active'
+            else:
+                report[ 'state' ] = 'inactive'
 
             # add status to list
             active.append( report )
@@ -81,6 +104,9 @@ class Manager( object ):
     #=========================================================================
     def handle_request( self, string ):
         """
+        Handles outside requests for task execution, control, and updates.
+        @param string   A JSON-formatted request string
+        @return         A JSON-formatted response string
         """
 
         # parse request
@@ -115,7 +141,9 @@ class Manager( object ):
                         req.name,
                         req.arguments
                     )
-                    task_id = self.workers.add( worker.Worker( descr ) )
+                    task_id = self.workers.add(
+                        worker.Worker( descr, req.key )
+                    )
                     res = {
                         'status'   : 'ok',
                         'response' : 'start',
@@ -132,7 +160,7 @@ class Manager( object ):
 
             # handle request to stop an active/queued task
             elif req.request == 'stop':
-                wrkr = self.workers.get( req.taskid )
+                wrkr = self.workers[ req.taskid ]
                 if wrkr is None:
                     res = {
                         'status'   : 'error',
@@ -154,7 +182,7 @@ class Manager( object ):
                 res = {
                     "status"   : "ok",
                     "response" : "active",
-                    'active'   : self.get_active()
+                    'active'   : self.get_active( req.key )
                 }
                 self.log.log( log.REQUEST, string, req.key )
 
@@ -176,6 +204,7 @@ class Manager( object ):
     #=========================================================================
     def process( self ):
         """
+        Method to periodically invoke to keep the task manager current.
         """
 
         # service all the status queues to keep them from filling up
@@ -191,7 +220,7 @@ class Manager( object ):
         for task_id in task_ids:
 
             # get worker object for this task ID
-            wrkr = self.workers.get( task_id )
+            wrkr = self.workers[ task_id ]
 
             # look for workers that can be started (should be abstracted)
             if wrkr.state == worker.Worker.INIT:
@@ -223,6 +252,7 @@ class Manager( object ):
     #=========================================================================
     def start( self ):
         """
+        Method to call before task management needs to begin.
         """
 
         # nothing needed here, yet
@@ -233,6 +263,7 @@ class Manager( object ):
     #=========================================================================
     def stop( self ):
         """
+        Method to call when task management needs to stop.
         """
 
         # get a copy of task IDs
@@ -271,6 +302,8 @@ class Manager( object ):
     #=========================================================================
     def _update_environment( self ):
         """
+        Updates expensively-obtained information about the execution
+        environment.
         """
 
         self.task_index = self.config.get_task_index()
