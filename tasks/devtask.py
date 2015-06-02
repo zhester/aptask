@@ -43,3 +43,4 @@ class DevTask( task.Task ):
             self.report.progress += 0.1
             self.report.status = task.Report.RUNNING
         return self.report
+
