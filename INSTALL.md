@@ -34,3 +34,4 @@ that key.  Any number of keys may be used in either group.
 
 To disable authentication for a particular group, replace the array with
 `null`.
+
