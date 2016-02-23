@@ -14,6 +14,7 @@ Application Configuration
 import glob
 import importlib
 import json
+import logging
 import os
 import sys
 
@@ -112,7 +113,7 @@ class Configuration( object ):
         """
         """
 
-        return self.get_path( 'data' ) + os.sep + 'log.sqlite'
+        return self.get_path( 'data' ) + os.sep + 'aptask.log'
 
 
     #=========================================================================
@@ -228,29 +229,41 @@ class Configuration( object ):
         Checks the current configuration against reality.
         """
 
+        # Host is required.
         if 'host' not in self._data:
             raise VerificationError()
 
+        # Port is required.
         if 'port' not in self._data:
             raise VerificationError()
 
+        # Directories are required.
         if 'directories' not in self._data:
             raise VerificationError()
 
         dirs = self._data[ 'directories' ]
 
+        # Data directory is required.
         if 'data' not in dirs:
             raise VerificationError()
 
+        # Tasks directory is required.
         if 'tasks' not in dirs:
             raise VerificationError()
 
+        # Make sure script has access to data directory.
         if os.access( dirs[ 'data' ], ( os.R_OK | os.W_OK | os.X_OK ) ) == False:
             raise VerificationError()
 
+        # Make sure script has access to tasks directory.
         if os.access( dirs[ 'tasks' ], ( os.R_OK | os.X_OK ) ) == False:
             raise VerificationError()
 
-        if 'loglevel' not in self._data:
-            self._data[ 'loglevel' ] = 1
+        # Check/default the logging level.
+        ll = self._data.get( 'loglevel', logging.WARNING )
+        if isinstance( ll, basestring ):
+            if hasattr( logging, ll ):
+                self._data[ 'loglevel' ] = getattr( logging, ll )
+            else:
+                self._data[ 'loglevel' ] = logging.WARNING
 

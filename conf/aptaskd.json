@@ -2,7 +2,7 @@
     "_see" : "INSTALL.md",
     "host" : "",
     "port" : 2142,
-    "loglevel" : 6,
+    "loglevel" : "WARNING",
     "directories" : {
         "tasks" : "tasks",
         "data" : "var"

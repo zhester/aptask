@@ -10,8 +10,7 @@ Documentation
 Refactoring
 -----------
 
-- Replace `aptask.log` with built-in `logging` system.
-- Remove `sqlite3` dependency.
+- Add back the ability to set logging output to the configured log file.
 - Re-evaluate all one-off modules for a more Python-ic way of doing business.
 - Re-evaluate application configuration (file format, abstraction, validity).
 
@@ -41,7 +40,6 @@ Features and New Development
 - Implement remote workers.
   - Abstract communication pipes to work over network.
 - Make the client a more complete client (rather than a testing tool).
-  - Re-tool the arguments it can take.
   - Add an interactive query/response interface.
 - Allow worker tasks to post "results" of processing when complete.
   - These persist after the task has finished up until requested by a client.

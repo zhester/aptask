@@ -16,7 +16,6 @@ __version__ = '0.0.0'
 import configuration
 import data
 import fifo
-import log
 import manager
 import net
 import raqueue

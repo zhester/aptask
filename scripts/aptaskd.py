@@ -1,112 +1,134 @@
 #!/usr/bin/env python2
+#=============================================================================
+#
+# aptask Daemon Script
+#
+#=============================================================================
 
-"""
-Asynchronous Parallel Task Execution Daemon Script
-"""
 
 __version__ = '0.0.0'
 
 
+
+"""
+Asynchronous Parallel Task Queue Daemon Script
+==============================================
+"""
+
+
+__version__ = '0.0.1'
+
+
+import logging
 import multiprocessing
 import os
 import signal
 import sys
 import time
 
-# Allow development-only importing.
-script_path = os.path.realpath( __file__ )
-script_dir  = os.path.dirname( script_path )
-proj_dir    = os.path.dirname( script_dir )
-sys.path.insert( 0, proj_dir )
 
-import aptask
+# Allow development-only importing.
+try:
+    import aptask
+except ImportError:
+    script_path = os.path.realpath( __file__ )
+    script_dir  = os.path.dirname( script_path )
+    proj_dir    = os.path.dirname( script_dir )
+    sys.path.insert( 0, proj_dir )
+    import aptask
+
+
+# Initialize the logging sub-system.
+logging.basicConfig()
+
+# Create the root logger.
+_logger = logging.getLogger()
 
 
 #=============================================================================
-_is_running = False                 # daemon control flag
+_is_running = False               # daemon control flag
 
 
 #=============================================================================
 def signal_handler( signal_number, frame ):
     """
-    Empty signal handler (for now)
-    @param signal_number
-                        The signal number from the OS interrupt
-    @param frame        The frame
+    Implements the daemon's signal handler.
+
+    @param signal_number The signal number from the OS interrupt
+    @param frame         The frame
     """
 
-    # stop the daemon
+    # Stop the daemon.
     stop()
 
 
 #=============================================================================
 def start( config ):
     """
-    Daemon function allows this to be used from a wrapper script.
-    @param config       Application configuration object
-    @return             Exit code (0 = normal)
+    Allows this to be used from a wrapper script.
+
+    @param config Application configuration object
+    @return       Shell exit code (0 = normal)
     """
 
-    # global control flag
+    # Global control flag
     global _is_running
 
-    # add tasks directory to import path list
+    # Add tasks directory to import path list.
     sys.path.append( config.get_path( 'tasks' ) )
 
-    # initialize the logging facility
-    logger = aptask.log.Log( config.get_log_file(), config.loglevel )
-    logger.append_message( 'initializing daemon' )
+    # Notify the log that we're starting.
+    _logger.info( 'Initializing daemon.' )
 
-    # create the network server control and communications pipe
+    # Create the network server control and communications pipe.
     ( p_pipe, c_pipe ) = multiprocessing.Pipe( True )
 
-    # create network server in its own process
+    # Create network server in its own process.
     netd = multiprocessing.Process(
         target = aptask.net.net,
         args   = ( c_pipe, config.get_address() ),
         name   = 'aptasknetd'
     )
 
-    # create and start the task manager
-    man = aptask.manager.Manager( config, logger )
+    # Create and start the task manager.
+    man = aptask.manager.Manager( config )
     man.start()
 
-    # set running flag
+    # Set running flag.
     _is_running = True
 
-    # start the network server process
+    # Start the network server process.
     netd.start()
 
-    # enter daemon loop
+    # Enter daemon loop.
     while _is_running == True:
 
-        # check for requests from netd
+        # Check for requests from netd.
         if p_pipe.poll() == True:
 
-            # get message data and send to message handler
+            # Get message data and send to message handler.
             message = p_pipe.recv()
             message.data = man.handle_request( message.data )
             p_pipe.send( message )
 
-        # allow manager to process worker queues
+        # Allow manager to process worker queues.
         man.process()
 
         # poll interval (may not be needed, or could be adaptive)
         #if _is_running == True:
         #    time.sleep( 0.005 )
 
-    # shut down task manager
+    # Shut down task manager.
     man.stop()
 
-    # shut down network server
+    # Shut down network server.
     p_pipe.send( aptask.net.QUIT )
     netd.join()
 
-    # indicate shut down and close log
-    logger.append_message( 'shutting down daemon' )
-    logger.close()
+    # Notify the log that we're stopping.
+    _logger.info( 'Shutting down daemon.' )
 
-    # return exit code
+    # Return exit code.
     return 0
 
 
@@ -144,7 +166,7 @@ def main( argv ):
         description = 'Asynchronous Parallel Task Execution Daemon Script'
     )
     parser.add_argument(
-        '-c',
+        '-i',
         '--config',
         default = 'conf/aptaskd.json',
         help    = 'Load configuration file from this location.'
@@ -153,17 +175,13 @@ def main( argv ):
         '-v',
         '--version',
         default = False,
-        help    = 'Display script version.',
-        action  = 'store_true'
+        help    = 'Display script version and exit.',
+        action  = 'version',
+        version = __version__
     )
 
     # parse the arguments
     args = parser.parse_args( argv[ 1 : ] )
-
-    # check for version request
-    if args.version == True:
-        print 'Version', __version__
-        return 0
 
     # load configuration
     config = aptask.configuration.load_configuration( args.config )
@@ -172,6 +190,9 @@ def main( argv ):
     if config is None:
         print 'invalid configuration'
         return -1
+
+    # Adjust logging level.
+    _logger.setLevel( config.loglevel )
 
     # run the daemon until shut down
     exit_code = start( config )

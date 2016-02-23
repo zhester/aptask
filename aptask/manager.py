@@ -14,9 +14,9 @@ Provides the top-level control and tracking of long-running worker processes.
 
 
 import json
+import logging
 
 import fifo
-import log
 import request
 import worker
 
@@ -30,15 +30,15 @@ class Manager( object ):
 
 
     #=========================================================================
-    def __init__( self, config, logger ):
+    def __init__( self, config ):
         """
-        Constructor.
-        @param config
-        @param logger
+        Initializes a Manager object.
+
+        @param config The application configuration object
         """
 
         self.config     = config
-        self.log        = logger
+        self.log        = logging.getLogger( __name__ )
         self.task_index = []
         self.task_names = []
         self.workers    = fifo.WorkerFIFO()
@@ -121,12 +121,12 @@ class Manager( object ):
         # check basic request validity
         if req.is_valid() == False:
             res = { 'status' : 'error', 'message' : 'malformed request' }
-            self.log.log( log.CLIENT_ERROR, string )
+            self.log.warn( 'client:%s', string )
 
         # check request authorization
         elif self.config.is_authorized( req.key, req.request ) == False:
             res = { 'status' : 'error', 'message' : 'invalid auth key' }
-            self.log.log( log.CLIENT_ERROR, string )
+            self.log.warn( 'client:%s', string )
 
         # request is, basically, in good shape
         else:
@@ -138,7 +138,7 @@ class Manager( object ):
                     'response' : 'index',
                     'index'    : self.task_index
                 }
-                self.log.log( log.REQUEST, string, req.key )
+                self.log.info( 'request:%s;key:%s', string, req.key )
 
             # handle request to start a new task
             elif req.request == 'start':
@@ -155,14 +155,14 @@ class Manager( object ):
                         'response' : 'start',
                         'taskid'   : task_id
                     }
-                    self.log.log( log.REQUEST, string, req.key )
+                    self.log.info( 'request:%s;key:%s', string, req.key )
                 else:
                     res = {
                         'status'   : 'error',
                         'response' : 'start',
                         'message'  : 'invalid task name'
                     }
-                    self.log.log( log.CLIENT_ERROR, string, req.key )
+                    self.log.warn( 'client:%s;key:%s', string, req.key )
 
             # handle request to stop an active/queued task
             elif req.request == 'stop':
@@ -173,7 +173,7 @@ class Manager( object ):
                         'response' : 'stop',
                         'taskid'   : req.taskid
                     }
-                    self.log.log( log.CLIENT_ERROR, string, req.key )
+                    self.log.warn( 'client:%s;key:%s', string, req.key )
                 else:
                     wrkr.stop()
                     res = {
@@ -181,7 +181,7 @@ class Manager( object ):
                         'response' : 'stop',
                         'taskid'   : req.taskid
                     }
-                    self.log.log( log.REQUEST, string, req.key )
+                    self.log.info( 'request:%s;key:%s', string, req.key )
 
             # handle request for all active tasks
             elif req.request == 'active':
@@ -190,18 +190,18 @@ class Manager( object ):
                     "response" : "active",
                     'active'   : self.get_active( req.key )
                 }
-                self.log.log( log.REQUEST, string, req.key )
+                self.log.info( 'request:%s;key:%s', string, req.key )
 
             # unknown request command
             else:
                 res = { 'status' : 'error', 'message' : 'invalid request' }
-                self.log.log( log.CLIENT_ERROR, string, req.key )
+                self.log.warn( 'client:%s;key:%s', string, req.key )
 
         # format the response
         response = json.dumps( res )
 
         # log the response
-        self.log.log( log.RESPONSE, response )
+        self.log.info( 'response:%s', response )
 
         # return a formatted response
         return response
@@ -231,7 +231,7 @@ class Manager( object ):
             # look for workers that can be started (should be abstracted)
             if wrkr.state == worker.Worker.INIT:
                 wrkr.start()
-                self.log.log( log.TASKING, 'starting task %s' % task_id )
+                self.log.info( 'task:start:%s', task_id )
 
             # look for workers that have been stopped
             elif wrkr.state == worker.Worker.STOPPING:
@@ -240,7 +240,7 @@ class Manager( object ):
                 if wrkr.is_alive() == False:
                     wrkr.join()
                     self.workers.remove( task_id )
-                    self.log.log( log.TASKING, 'stopping task %s' % task_id )
+                    self.log.info( 'task:stop:%s', task_id )
 
             # look for active worker status transitions
             else:
@@ -252,7 +252,7 @@ class Manager( object ):
                 if ( status is not None ) and ( status.is_done() == True ):
                     wrkr.join()
                     self.workers.remove( task_id )
-                    self.log.log( log.TASKING, 'stopping task %s' % task_id )
+                    self.log.info( 'task:stop:%s', task_id )
 
 
     #=========================================================================
@@ -269,7 +269,7 @@ class Manager( object ):
     #=========================================================================
     def stop( self ):
         """
-        Method to call when task management needs to stop.
+        Stops all tasks controlled by the manager.
         """
 
         # get a copy of task IDs
@@ -312,27 +312,9 @@ class Manager( object ):
         environment.
         """
 
+        # Construct the complete list of available tasks in the system.
         self.task_index = self.config.get_task_index()
+
+        # Create a lookup table of task specifiers by name.
         self.task_names = [ x[ 'name' ] for x in self.task_index ]
-
-
-#=============================================================================
-def main( argv ):
-    """
-    Script execution entry point
-    @param argv         Arguments passed to the script
-    @return             Exit code (0 = success)
-    """
-
-    import configuration
-    import log
-    conf = configuration.load_configuration( 'aptaskd.json' )
-    logger = log.Log( conf.get_log_file() )
-
-    m = Manager( conf, logger )
-
-    print m.handle_request( '{"request":"index"}' )
-
-    # return success
-    return 0
 

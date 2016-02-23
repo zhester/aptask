@@ -22,6 +22,7 @@ Create Source Distribution
 --------------------------
 
     python setup.py sdist
+
 """
 
 
@@ -37,7 +38,7 @@ setup(
     author_email = 'zac.hester@gmail.com',
     license      = 'BSD',
     packages     = [ 'aptask' ],
-    scripts      = [ 'scripts/aptaskd.py', 'scripts/aptask.py' ],
+    scripts      = [ 'scripts/aptaskd.py', 'scripts/aptc.py' ],
     data_files   = [ ( 'config', 'conf/aptaskd.json' ) ],
     zip_safe     = False
 )
