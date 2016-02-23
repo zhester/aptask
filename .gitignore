@@ -1,5 +1,13 @@
-*.pyc
-*.py~
-*.md~
-*.json~
+# Compilation Artifacts
+__pycache__/
+*.py[cod]
+*.py.class
+
+# Distribution Artifacts
+*.egg-info/
+pip-*.txt
+
+# Development Files
+venv/
 var/*.sqlite
+
