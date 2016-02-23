@@ -56,6 +56,7 @@ QUIT = Message( Message.QUIT )      # message to send to shut down the process
 def net( pipe, address ):
     """
     Network daemon process function.
+
     @param pipe         IPC duplex communication pipe connection object
     @param address      Address of the listen port (tuple)
     @return             Process exit code (0 = normal)
@@ -72,6 +73,7 @@ def net( pipe, address ):
 
     # create and configure the server socket
     sock = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
+    sock.setsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR, 1 )
     sock.bind( address )
     sock.listen( backlog )
 
@@ -169,6 +171,7 @@ def net( pipe, address ):
                     poll.remove( ready )
 
     # shut down the listen socket
+    sock.shutdown( socket.SHUT_RDWR )
     sock.close()
 
     # return exit code
