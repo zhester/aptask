@@ -44,14 +44,6 @@ class VerificationError( Error ):
 
 
 #=============================================================================
-class KeyError( Error ):
-    """
-    """
-
-    pass
-
-
-#=============================================================================
 class Configuration( object ):
     """
     """
@@ -129,8 +121,7 @@ class Configuration( object ):
         if base.startswith( '/' ) == True:
             return base
 
-        script_path = os.path.realpath( __file__ )
-        script_dir  = os.path.dirname( script_path )
+        script_dir = os.path.realpath( os.getcwd() )
         return script_dir + os.sep + base
 
 
@@ -256,31 +247,3 @@ class Configuration( object ):
         if 'loglevel' not in self._data:
             self._data[ 'loglevel' ] = 1
 
-
-#=============================================================================
-def main( argv ):
-    """
-    Script execution entry point
-    @param argv         Arguments passed to the script
-    @return             Exit code (0 = success)
-    """
-
-    conf = load_configuration( 'aptaskd.json' )
-
-    pp = {
-        'sort_keys'  : True,
-        'indent'     : 4,
-        'separators' : ( ',', ' : ' )
-    }
-
-    print json.dumps( conf.get_address(), **pp )
-
-    print json.dumps( conf.get_task_index(), **pp )
-
-    # return success
-    return 0
-
-
-#=============================================================================
-if __name__ == "__main__":
-    sys.exit( main( sys.argv ) )

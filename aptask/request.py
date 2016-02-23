@@ -60,3 +60,4 @@ class Request( object ):
         if ( self.valid_syntax == True ) and ( self.request is not None ):
             return True
         return False
+

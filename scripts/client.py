@@ -8,7 +8,17 @@ aptask Development Client
 import json
 import socket
 
-import configuration
+
+try:
+    import aptask
+except ImportError:
+    import os
+    import sys
+    sys.path.insert(
+        0,
+        os.path.dirname( os.path.dirname( os.path.realpath( __file__ ) ) )
+    )
+    import aptask
 
 
 #=============================================================================
@@ -138,7 +148,15 @@ def main( argv ):
     @return             Exit code (0 = success)
     """
 
-    config = configuration.load_configuration( 'aptaskd.json' )
+    conf_file = os.path.sep.join(
+        (
+            os.path.dirname( os.path.dirname( os.path.realpath( __file__ ) ) ),
+            'conf',
+            'aptaskd.json'
+        )
+    )
+    print( conf_file )
+    config = aptask.configuration.load_configuration( conf_file )
 
     address = ( 'localhost', config.get_address()[ 1 ] )
 

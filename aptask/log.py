@@ -82,8 +82,11 @@ class Log( object ):
         """
         """
 
-        self.db_file        = db_file
-        self.db             = sqlite3.connect( self.db_file )
+        self.db_file = db_file
+        try:
+            self.db = sqlite3.connect( self.db_file )
+        except sqlite3.OperationalError as oe:
+            raise RuntimeError( '{} : {}'.format( str( oe ), self.db_file ) )
         self.db.row_factory = sqlite3.Row
         self.is_open        = True
         self.max_level      = max_level

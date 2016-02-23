@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 """
 Asynchronous Parallel Task Execution Daemon Script
@@ -13,10 +13,13 @@ import signal
 import sys
 import time
 
-import configuration
-import log
-import manager
-import net
+# Allow development-only importing.
+script_path = os.path.realpath( __file__ )
+script_dir  = os.path.dirname( script_path )
+proj_dir    = os.path.dirname( script_dir )
+sys.path.insert( 0, proj_dir )
+
+import aptask
 
 
 #=============================================================================
@@ -51,7 +54,7 @@ def start( config ):
     sys.path.append( config.get_path( 'tasks' ) )
 
     # initialize the logging facility
-    logger = log.Log( config.get_log_file(), config.loglevel )
+    logger = aptask.log.Log( config.get_log_file(), config.loglevel )
     logger.append_message( 'initializing daemon' )
 
     # create the network server control and communications pipe
@@ -59,13 +62,13 @@ def start( config ):
 
     # create network server in its own process
     netd = multiprocessing.Process(
-        target = net.net,
+        target = aptask.net.net,
         args   = ( c_pipe, config.get_address() ),
         name   = 'aptasknetd'
     )
 
     # create and start the task manager
-    man = manager.Manager( config, logger )
+    man = aptask.manager.Manager( config, logger )
     man.start()
 
     # set running flag
@@ -96,7 +99,7 @@ def start( config ):
     man.stop()
 
     # shut down network server
-    p_pipe.send( net.QUIT )
+    p_pipe.send( aptask.net.QUIT )
     netd.join()
 
     # indicate shut down and close log
@@ -143,7 +146,7 @@ def main( argv ):
     parser.add_argument(
         '-c',
         '--config',
-        default = 'aptaskd.json',
+        default = 'conf/aptaskd.json',
         help    = 'Load configuration file from this location.'
     )
     parser.add_argument(
@@ -163,7 +166,7 @@ def main( argv ):
         return 0
 
     # load configuration
-    config = configuration.load_configuration( args.config )
+    config = aptask.configuration.load_configuration( args.config )
 
     # check configuration
     if config is None:
@@ -180,3 +183,4 @@ def main( argv ):
 #=============================================================================
 if __name__ == "__main__":
     sys.exit( main( sys.argv ) )
+
