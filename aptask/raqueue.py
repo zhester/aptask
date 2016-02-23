@@ -1,7 +1,12 @@
-#!/usr/bin/env python
+#=============================================================================
+#
+# Random Access Queue
+#
+#=============================================================================
 
 """
 Random Access Queue
+===================
 
 Implements a random access queue on top of a dictionary.  The dictionary
 foundation provides fast access to items through the hashing index.  It is
@@ -87,3 +92,4 @@ class RandomAccessQueue( dict ):
 
         # return the item
         return item
+

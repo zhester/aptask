@@ -1,7 +1,13 @@
-#!/usr/bin/env python
+#=============================================================================
+#
+# Worker Process
+#
+#=============================================================================
+
 
 """
 Worker Process
+==============
 """
 
 
@@ -233,8 +239,9 @@ def worker( command_queue, status_queue, task_descriptor ):
 def _create_task( descriptor ):
     """
     Creates a task object from a descriptor.
-    @param descriptor   Task descriptor
-    @return             Task instance
+
+    @param descriptor Task descriptor
+    @return           Task instance
     """
 
     # import the task module by name
@@ -246,22 +253,3 @@ def _create_task( descriptor ):
     # instantiate the class, and return it
     return class_ref( descriptor[ 'arguments' ] )
 
-
-#=============================================================================
-def main( argv ):
-    """
-    Script execution entry point
-    @param argv         Arguments passed to the script
-    @return             Exit code (0 = success)
-    """
-
-
-
-    # return success
-    return 0
-
-
-#=============================================================================
-if __name__ == "__main__":
-    import sys
-    sys.exit( main( sys.argv ) )

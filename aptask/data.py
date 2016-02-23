@@ -1,7 +1,13 @@
-#!/usr/bin/env python
+#=============================================================================
+#
+# Data Object
+#
+#=============================================================================
+
 
 """
 Data Object
+===========
 
 A very generic object intended to be used to store and transmit simple data.
 This is similar to using a dict.  Hoever, fields are accessed using
@@ -200,26 +206,3 @@ class _Test2( Data ):
         d = vars()
         self.super_pairs( zip( d.keys(), d.values() ) )
 
-
-#=============================================================================
-def main( argv ):
-    """
-    Script execution entry point
-    @param argv         Arguments passed to the script
-    @return             Exit code (0 = success)
-    """
-
-    t = _Test( a = 8 )
-    print t
-
-    t = _Test2( a = 9 )
-    print t
-
-    # return success
-    return 0
-
-
-#=============================================================================
-if __name__ == "__main__":
-    import sys
-    sys.exit( main( sys.argv ) )

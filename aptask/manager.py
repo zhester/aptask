@@ -1,7 +1,13 @@
-#!/usr/bin/env python
+#=============================================================================
+#
+# Task Execution Manager
+#
+#=============================================================================
+
 
 """
 Task Execution Manager
+======================
 
 Provides the top-level control and tracking of long-running worker processes.
 """
@@ -330,8 +336,3 @@ def main( argv ):
     # return success
     return 0
 
-
-#=============================================================================
-if __name__ == "__main__":
-    import sys
-    sys.exit( main( sys.argv ) )

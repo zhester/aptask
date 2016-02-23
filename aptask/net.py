@@ -1,7 +1,13 @@
-#!/usr/bin/env python
+#=============================================================================
+#
+# Network Interface Process
+#
+#=============================================================================
+
 
 """
 Network Interface Process
+=========================
 
 This implements a network daemon that communicates with its parent process
 through a duplex pipe.  This daemon uses select polling to handle multiple
@@ -219,8 +225,3 @@ def main( argv ):
     # return success
     return 0
 
-
-#=============================================================================
-if __name__ == "__main__":
-    import sys
-    sys.exit( main( sys.argv ) )

@@ -1,7 +1,12 @@
-#!/usr/bin/env python
+#=============================================================================
+#
+# User Task Interface
+#
+#=============================================================================
 
 """
 User Task Interface
+===================
 
 This module should be used to implement new task execution drivers.
 Semantically, a task is the object a worker creates and manipulates to execute
@@ -282,9 +287,4 @@ def main( argv ):
 
     # return success
     return 0
-
-#=============================================================================
-if __name__ == "__main__":
-    import sys
-    sys.exit( main( sys.argv ) )
 

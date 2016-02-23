@@ -1,7 +1,13 @@
-#!/usr/bin/env python
+#=============================================================================
+#
+# Application Configuration
+#
+#=============================================================================
+
 
 """
 Application Configuration
+=========================
 """
 
 
@@ -15,7 +21,8 @@ import sys
 #=============================================================================
 def load_configuration( filename ):
     """
-    Load configuration from a file.
+    Loads configuration from a file.
+
     @param filename     The name of the file where the configuration is stored
     @return             A populated Configuration object
     """

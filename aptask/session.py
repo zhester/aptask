@@ -1,7 +1,13 @@
-#!/usr/bin/env python
+#=============================================================================
+#
+# Network Session Queue
+#
+#=============================================================================
+
 
 """
 Network Session Queue
+=====================
 
 Provides a means of building a queue of network "sessions."  While the
 fundamental protocol of the aptask system is session-less, the server uses
@@ -41,3 +47,4 @@ class SessionQueue( raqueue.RandomAccessQueue ):
 
         # add the session data to the queue, and return the session ID
         return super( SessionQueue, self ).add( data )
+
