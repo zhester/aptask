@@ -33,14 +33,9 @@ class Command( data.Data ):
 
 
     #=========================================================================
-    def __init__( self, command_id = CONTINUE ):
-        """
-        Constructor.
-        @param command_id
-                        Command identifier
-        """
-
-        self.super_init( vars() )
+    _fields = [
+        ( 'command_id', CONTINUE ) # Command message identifier
+    ]
 
 
 #=============================================================================

@@ -31,21 +31,16 @@ class Message( data.Data ):
 
 
     #=========================================================================
-    DATA = 1                        # message contains data
-    QUIT = 86                       # message indicates process shutdown
+    DATA = 1  # message contains data
+    QUIT = 86 # message indicates process shutdown
 
 
     #=========================================================================
-    def __init__( self, mid = DATA, sid = None, data = None ):
-        """
-        Constructor.
-        @param mid      Message ID (default is for a data message)
-        @param sid      Request session ID (required for data messages)
-        @param data     Message data payload (as a string)
-        """
-
-        # load arguments into object state
-        self.super_init( vars() )
+    _fields = [
+        ( 'mid', DATA ), # Message ID (default is for a data message)
+        ( 'sid', None ), # Request session ID (required for data messages)
+        ( 'data', None ) # Message data payload (as a string)
+    ]
 
 
 #=============================================================================

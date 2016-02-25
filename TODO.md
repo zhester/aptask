@@ -37,14 +37,18 @@ Features and New Development
 - Implement parallel queue scheduling.
   - Queue is currently sequential.
   - May require notion of task dependencies (to force sequential execution).
-- Implement remote workers.
-  - Abstract communication pipes to work over network.
-- Make the client a more complete client (rather than a testing tool).
-  - Add an interactive query/response interface.
-- Allow worker tasks to post "results" of processing when complete.
-  - These persist after the task has finished up until requested by a client.
 - Build a few general-purpose task classes.
   - Run any `subprocess`-able command that is on a whitelist of commands.
   - Run any python function from a whitelist.
   - Import and run any module function (similar to `-m` for the interpreter).
+- Write a stand-alone client driver for Python/WSGI applications.
+- Write a PHP client driver.
+- Write a JavaScript class to simplify client implementations with the
+  host-side drivers.
+- Make the client a more complete client (rather than a testing tool).
+  - Add an interactive query/response interface.
+- Allow worker tasks to post "results" of processing when complete.
+  - These persist after the task has finished up until requested by a client.
+- Implement remote workers.
+  - Abstract communication pipes to work over network.
 

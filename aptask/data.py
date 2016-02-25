@@ -10,11 +10,30 @@ Data Object
 ===========
 
 A very generic object intended to be used to store and transmit simple data.
-This is similar to using a dict.  Hoever, fields are accessed using
-attributes, and this is intended to be extended as future needs warrant.
+In practice, this is similar to a mutable version of a
+`collections.namedtuple` that is meant to be extended.
+
 The key to using this module correctly is defining the fields necessary for
-your object in your subclass' constructor.  Once defined there, this class
-eliminates dual-maintenance issues.
+your object in your subclass.  Once defined there, this class minimizes
+dual-maintenance.
+
+Example Usage
+-------------
+
+    class MyData( Data ):
+        _fields = [
+            ( 'field_1', 42 ),
+            ( 'field_2', 3.1 ),
+            ( 'field_3', 'green' )
+        ]
+
+    data = MyData( field_2 = 1.23 )
+
+    print( data.field_1, data.field_2, data.field_3 )
+
+    serial_data = str( data )
+
+See: [tests/test_data.py](tests/test_data.py) for usage testing.
 """
 
 
@@ -29,64 +48,102 @@ class Data( object ):
 
 
     #=========================================================================
-    def __init__( self, **kwargs ):
+    # Inheriting classes can provide a list of fields they wish to formally
+    # define along with their default values.  This is specified as a list of
+    # two-tuples: `[ ( 'name', 'default' ), ... ]`
+    _fields = None
+
+
+    #=========================================================================
+    def __init__( self, *args, **kwargs ):
         """
-        Constructor.
-        @param **kwargs Anything or everything, but not nothing
+        Initializes a basic Data object.
+
+        When specifying positional arguments, these values are loaded into the
+        object in the order of the specified `_fields` list.
+
+        When specifying keyword arguments, only arguments that match the names
+        given in the subclass' `_fields` attribute are loaded.
+
+        @param *args    The initial field values for the data object.
+        @param **kwargs The initial fields and values for the data object.
         """
 
-        # check for secret handshake
-        if '_vars' in kwargs:
-            if 'self' in kwargs[ '_vars' ]:
-                del kwargs[ '_vars' ][ 'self' ]
-            self.__dict__.update( **kwargs[ '_vars' ] )
-            del kwargs[ '_vars' ]
+        # Initialize list of serializable object fields.
+        self._keys     = []
+        self._defaults = {}
 
-        # load keyword arguments into object state
-        self.__dict__.update( **kwargs )
+        # Look for fields in the subclass.
+        if self._fields is not None:
 
-        # record a separate list of keys in case the subclass adds more later
-        self._keys = self.__dict__.keys()
-        self._iter = 0
+            # Establish each field in this object.
+            for key, default in self._fields:
+
+                # Set up the field.
+                self._keys.append( key )
+                self._defaults[ key ] = default
+                setattr( self, key, default )
+
+            # Attempt to set attributes from positional arguments.
+            for index, arg in enumerate( args ):
+                setattr( self, self._keys[ index ], args )
+
+            # Attempt to set attributes from keyword arguments.
+            self.__dict__.update( kwargs )
 
 
     #=========================================================================
     def __contains__( self, key ):
         """
-        Object "contains" magic method for "in" queries.
-        @param key      Member name to check
-        @return         If this object has that member
+        Implements the method for `in` queries.
+
+        @param key Field name to check
+        @return    If this object has that field
         """
 
-        return hasattr( self, key )
+        # Check the list of serializable fields.
+        return key in self._keys
 
 
     #=========================================================================
     def __delitem__( self, key ):
         """
-        Deletes a member from the object when using "del" operator.
-        @param key      Member name to delete
+        Deletes a field from the object when using `del` operator on
+        subscripted fields.
+
+        @param key Field name to delete
         """
 
+        # Check presence of field.
+        if key not in self._keys:
+            raise KeyError( key )
+
+        # Remove the field.
+        self._keys.remove( key )
+        del self._defaults[ key ]
         delattr( self, key )
 
 
     #=========================================================================
     def __iter__( self ):
         """
-        Iterator protocol support.
-        @return         The iterable object
+        Implements iterator protocol support.  Iteration is in the style of
+        dictionaries (each item is the name of a field in the object).
+
+        @return A generator producing the names of each field in the object
         """
 
-        self._iter = 0
-        return self
+        # Yield each key.
+        for key in self._keys:
+            yield key
 
 
     #=========================================================================
     def __len__( self ):
         """
-        Support "len" built-in function.
-        @return         Number of members in object
+        Supports the `len()` built-in function.
+
+        @return Number of fields in the object
         """
 
         return len( self._keys )
@@ -95,114 +152,114 @@ class Data( object ):
     #=========================================================================
     def __getitem__( self, key ):
         """
-        Support array-notation retrieval.
-        @param key      Member name to retrieve
-        @return         The value of the requested member
+        Supports subscript notation of field values.
+
+        @param key Field name from which to retrieve a value
+        @return    The value of the requested field
         """
 
+        # Raise the expected exception if this field doesn't exist.
+        if key not in self._keys:
+            raise KeyError( key )
+
+        # Attempt to retrieve the value from the attribute.
         return getattr( self, key )
 
 
     #=========================================================================
     def __getstate__( self ):
         """
-        Support pickle protocol to store an instance.
-        @return         A dictionary containing all member data
+        Supports the pickle protocol to serialize an instance.
+
+        @return A dictionary containing all serializable fields
         """
 
+        # Scan the object for required fields.
         return dict( ( k, self.__dict__[ k ] ) for k in self._keys )
 
 
     #=========================================================================
     def __setitem__( self, key, value ):
         """
-        Support array-notation mutation.
-        @param key      Member name to mutate
-        @param value    The value to store in the requested member
+        Supports subscript notation of field values.
+
+        @param key   Field name of which to update
+        @param value The value to store in the requested field
         """
 
+        # Raise an exception if this field doesn't exist.
+        if key not in self._keys:
+            raise KeyError( key )
+
+        # Set the value for this field in the object's state.
         setattr( self, key, value )
 
 
     #=========================================================================
     def __str__( self ):
         """
-        Convert object data to a string (JSON).
-        @return         String representation of object data
+        Serializes object data into a JSON string.
+
+        @return String representation of object state
         """
 
-        return json.dumps( self.__getstate__(), separators = ( ', ', ':' ) )
+        # Use JSON to serialize object state.
+        return json.dumps( self.__getstate__() )
 
 
     #=========================================================================
     def __setstate__( self, data ):
         """
-        Support pickle protocol to restore an instance.
-        @param data     A dictionary containing all member data
+        Supports pickle protocol to un-serialize an instance.
+
+        @param data A dictionary containing all member data
         """
 
-        self.__dict__.update( data )
+        # Reset field list.
         self._keys = data.keys()
+
+        # Reset default values.
+        self._defaults = dict( data )
+
+        # Update all attribute values.
+        self.__dict__.update( data )
 
 
     #=========================================================================
     def keys( self ):
         """
-        Support a dictionary-style request for a list of all members.
-        @return         A list of object member names
+        Supports dictionary-style request for a list of all field names.
+
+        @return A list of names of fields in this object
         """
 
-        return self._keys
-
-
-    #=========================================================================
-    def next( self ):
-        """
-        Iterator protocol support.
-        @return         Next member in object
-        """
-
-        if self._iter >= len( self._keys ):
-            raise StopIteration
-
-        key = self._keys[ self._iter ]
-        self._iter += 1
-        return getattr( self, key )
-
-
-    #=========================================================================
-    def super_init( self, data ):
-        """
-        Magical superclass initializer alias.
-        @param data     A dictionary of member data to load into the object
-        """
-
-        super( self.__class__, self ).__init__( _vars = data )
-
-
-    #=========================================================================
-    def super_pairs( self, pairs ):
-        """
-        Magical superclass initializer alias using pair-wise data.
-        @param pairs    A list of key-value pairs of member data.
-        """
-
-        super( self.__class__, self ).__init__( _vars = dict( pairs ) )
+        # Return a list of field names.
+        return list( self._keys )
 
 
 #=============================================================================
-class _Test( Data ):
+class DynamicData( Data ):
+    """
+    Extends the Data class to provide dynamic object creation without requring
+    a subclass.
+    """
+
 
     #=========================================================================
-    def __init__( self, a, b = 1, c = '2', d = None ):
-        self.super_init( vars() )
+    def __init__( self, **kwargs ):
+        """
+        Initializes a DynamicData object.
 
+        Unlike the generic Data container, this object can only be initialized
+        using keyword arguments.  These arguments are used to create the
+        object's serializable fields and initial values.
 
-#=============================================================================
-class _Test2( Data ):
+        @param **kwargs The initial fields and values for the data object.
+        """
 
-    #=========================================================================
-    def __init__( self, a, b = 1, c = '2', d = None ):
-        d = vars()
-        self.super_pairs( zip( d.keys(), d.values() ) )
+        # Construct the _fields list before we initialize the object.
+        self._fields = kwargs.items()
+
+        # Initialize the object with the given values.
+        super( DynamicData, self ).__init__( **kwargs )
 
