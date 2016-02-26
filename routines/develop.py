@@ -11,6 +11,8 @@ Development Routine
 
 This routine provides a template for developing other custom routines, as well
 as a routine that can be used for synthetic testing and analysis.
+
+See: aptask.routine for more complete documenation of the routine protocol.
 """
 
 
@@ -30,14 +32,10 @@ class Develop( aptask.routine.Routine ):
 
 
     #=========================================================================
-    # Specify the list of arguments to alter per-task behavior.
-    # Each item in the list is either a sequence with the following items:
+    # Specify the list of arguments to alter per-task execution behavior.
+    # Each item in the list is a two-tuple with the following items:
     #
-    #    ( name, default, required, ahelp, atype )
-    #
-    # ... or a dictionary with the following keys:
-    #
-    #    "name", "default", "required", "ahelp", "atype"
+    #    ( name, default )
     #
 
     _arguments = [
