@@ -20,15 +20,6 @@ __version__ = '0.0.0'
 
 
 #=============================================================================
-def _testentry( a, b = 2.22, c = 'hello' ):
-    '_test_entry_point_function_'
-    yield 0.0
-    loops = a if type( a ) is int else 3
-    for loop in range( 1, loops + 1 ):
-        yield loop / loops
-
-
-#=============================================================================
 class _SubRoutine( aptask.routine.Routine ):
     '_test_sub_routine_class_'
     _arguments = [
@@ -37,12 +28,17 @@ class _SubRoutine( aptask.routine.Routine ):
         ( 'c', 'hello' ),
         ( 'd', None )
     ]
+    def __init__( self, *args, **kwargs ):
+        super( _SubRoutine, self ).__init__( *args, **kwargs )
+        self._abort_called      = 0
+        self._initialize_called = 0
+        self._process_called    = 0
     def abort( self ):
-        return 0
+        self._abort_called += 1
     def initialize( self ):
-        return 0
+        self._initialize_called += 1
     def process( self ):
-        return 0
+        self._process_called += 1
 
 
 #=============================================================================
@@ -51,16 +47,17 @@ class Test_get_function_arguments( unittest.TestCase ):
     Tests the get_function_arguments() module function
     """
 
+
     #=========================================================================
-    def test_gfa( self ):
+    def test_get_function_arguments( self ):
         """
         Tests the get_function_arguments() module function
         """
 
         # Test functions without arguments.
-        def _testempty():
+        def _testnone():
             return
-        actual   = aptask.routine.get_function_arguments( _testempty )
+        actual   = aptask.routine.get_function_arguments( _testnone )
         expected = []
         self.assertListEqual( expected, actual )
 
@@ -79,7 +76,9 @@ class Test_get_function_arguments( unittest.TestCase ):
         self.assertListEqual( expected, actual )
 
         # Test functions with some required arguments.
-        actual   = aptask.routine.get_function_arguments( _testentry )
+        def _testsome( a, b = 2.22, c = 'hello' ):
+            return
+        actual   = aptask.routine.get_function_arguments( _testsome )
         expected = [
             ( 'a', '__required__' ),
             ( 'b', 2.22 ),
@@ -89,10 +88,94 @@ class Test_get_function_arguments( unittest.TestCase ):
 
 
 #=============================================================================
+class Test_update( unittest.TestCase ):
+    """
+    Tests the update() module function
+    """
+
+
+    #=========================================================================
+    def test_update( self ):
+        """
+        Tests the update() module function
+        """
+
+        # Create a report to update.
+        report = aptask.routine.Report()
+
+        # Check initial state.
+        self.assertEqual( report.status, report.INIT )
+        self.assertEqual( report.progress, 0.0 )
+        self.assertIsNone( report.message )
+
+        # Update using shell-style results.
+        aptask.routine.update( report, 0 )
+        self.assertEqual( report.status, report.DONE )
+        self.assertEqual( report.progress, 1.0 )
+        self.assertIsNone( report.message )
+        aptask.routine.update( report, 1 )
+        self.assertEqual( report.status, report.DONE )
+        self.assertEqual( report.progress, 1.0 )
+        self.assertIsNone( report.message )
+        aptask.routine.update( report, -1 )
+        self.assertEqual( report.status, report.ERROR )
+        self.assertEqual( report.progress, 1.0 )
+        self.assertIsNone( report.message )
+
+        # Update using incremental progress results.
+        aptask.routine.update( report, 0.0 )
+        self.assertEqual( report.status, report.INIT )
+        self.assertEqual( report.progress, 0.0 )
+        self.assertIsNone( report.message )
+        aptask.routine.update( report, 0.3 )
+        self.assertEqual( report.status, report.RUNNING )
+        self.assertEqual( report.progress, 0.3 )
+        self.assertIsNone( report.message )
+        aptask.routine.update( report, 1.0 )
+        self.assertEqual( report.status, report.DONE )
+        self.assertEqual( report.progress, 1.0 )
+        self.assertIsNone( report.message )
+        aptask.routine.update( report, 2.0 )
+        self.assertEqual( report.status, report.DONE )
+        self.assertEqual( report.progress, 1.0 )
+        self.assertIsNone( report.message )
+        aptask.routine.update( report, -1.0 )
+        self.assertEqual( report.status, report.ERROR )
+        self.assertEqual( report.progress, 1.0 )
+        self.assertIsNone( report.message )
+
+        # Update using string progress results.
+        aptask.routine.update( report, '_message_' )
+        self.assertEqual( report.status, report.DONE )
+        self.assertEqual( report.progress, 1.0 )
+        self.assertEqual( report.message, '_message_' )
+
+        # Update using another report.
+        report2 = aptask.routine.Report(
+            status   = aptask.routine.Report.RUNNING,
+            progress = 0.5,
+            message  = '_message_'
+        )
+        report.update( report2 )
+        self.assertEqual( report.status, report.RUNNING )
+        self.assertEqual( report.progress, 0.5 )
+        self.assertEqual( report.message, '_message_' )
+
+        # Update using a string-able object.
+        stringable = [ 'alpha', 'baker', 'charlie' ]
+        string     = str( stringable )
+        report.update( stringable )
+        self.assertEqual( report.status, report.DONE )
+        self.assertEqual( report.progress, 1.0 )
+        self.assertEqual( report.message, string )
+
+
+#=============================================================================
 class TestReport( unittest.TestCase ):
     """
     Tests the Report class in the routine module
     """
+
 
     #=========================================================================
     def test_init( self ):
@@ -106,14 +189,29 @@ class TestReport( unittest.TestCase ):
 
 
     #=========================================================================
-    def test_is_done( self ):
+    def test_update( self ):
         """
-        Tests the is_done() Report method.
+        Tests the bound update method.
         """
-        report = aptask.routine.Report()
-        self.assertFalse( report.is_done() )
-        report.status = report.DONE
-        self.assertTrue( report.is_done() )
+        report1 = aptask.routine.Report()
+        report2 = aptask.routine.Report(
+            status   = aptask.routine.Report.RUNNING,
+            progress = 0.5,
+            message  = '_message_'
+        )
+
+        # Make sure all important fields are not equal.
+        self.assertNotEqual( report2.status,   report1.status   )
+        self.assertNotEqual( report2.progress, report1.progress )
+        self.assertNotEqual( report2.message,  report1.message  )
+
+        # Update report 1 with report 2's information.
+        report1.update( report2 )
+
+        # Make sure all important fields were updated.
+        self.assertEqual( report2.status,   report1.status   )
+        self.assertEqual( report2.progress, report1.progress )
+        self.assertEqual( report2.message,  report1.message  )
 
 
 #=============================================================================
@@ -121,6 +219,7 @@ class TestRoutine( unittest.TestCase ):
     """
     Tests the Routine class in the routine module
     """
+
 
     #=========================================================================
     def test_init( self ):
@@ -177,6 +276,28 @@ class TestRoutine( unittest.TestCase ):
 
 
     #=========================================================================
+    def test_abort( self ):
+        """
+        Tests the abort() Routine method.
+        """
+
+        # Create a base routine.
+        routine = aptask.routine.Routine()
+
+        # Verify the base routine does not implement the abort method.
+        self.assertRaises( NotImplementedError, routine.abort )
+
+        # Create a routine subclass.
+        routine = _SubRoutine()
+
+        # Request abort.
+        routine.abort()
+
+        # Verify abort was called on subclass.
+        self.assertEqual( 1, routine._abort_called )
+
+
+    #=========================================================================
     def test_gethelp( self ):
         """
         Tests the gethelp() Routine method.
@@ -188,18 +309,16 @@ class TestRoutine( unittest.TestCase ):
 
 
     #=========================================================================
-    def test_abort( self ):
+    def test_getstatus( self ):
         """
-        Tests the abort() Routine method.
+        Tests the getstatus() Routine method.
         """
 
         # Create a base routine.
         routine = aptask.routine.Routine()
-        self.assertRaises( NotImplementedError, routine.abort )
 
-        # Create a routine subclass.
-        routine = _SubRoutine()
-        self.assertEqual( 0, routine.abort() )
+        # Verify status is set to initial status.
+        self.assertEqual( aptask.routine.Report.INIT, routine.getstatus() )
 
 
     #=========================================================================
@@ -210,11 +329,37 @@ class TestRoutine( unittest.TestCase ):
 
         # Create a base routine.
         routine = aptask.routine.Routine()
+
+        # Verify the base routine does not implement the initialize method.
         self.assertRaises( NotImplementedError, routine.initialize )
 
         # Create a routine subclass.
         routine = _SubRoutine()
-        self.assertEqual( 0, routine.initialize() )
+
+        # Request initialization.
+        routine.initialize()
+
+        # Verify initialize was called on subclass.
+        self.assertEqual( 1, routine._initialize_called )
+
+
+    #=========================================================================
+    def test_is_done( self ):
+        """
+        Tests the is_done() Routine method.
+        """
+
+        # Create a base routine.
+        routine = aptask.routine.Routine()
+
+        # Verify routine reports not done.
+        self.assertFalse( routine.is_done() )
+
+        # Manually set routine to done status.
+        routine.report.status = routine.report.DONE
+
+        # Verify routine reports done.
+        self.assertTrue( routine.is_done() )
 
 
     #=========================================================================
@@ -229,7 +374,28 @@ class TestRoutine( unittest.TestCase ):
 
         # Create a routine subclass.
         routine = _SubRoutine()
-        self.assertEqual( 0, routine.process() )
+
+        # Request processing.
+        routine.process()
+
+        # Verify process was called on subclass.
+        self.assertEqual( 1, routine._process_called )
+
+
+#=============================================================================
+_testcalls  = 0
+_testyields = 0
+def _testentry( loops = 10 ):
+    '_test_entry_point_function_'
+    global _testcalls, _testyields
+    _testcalls += 1
+    if loops <= 0:
+        loops = 1
+    divisor = float( loops )
+    for loop in range( loops + 1 ):
+        _testyields += 1
+        progress = loop / divisor
+        yield progress
 
 
 #=============================================================================
@@ -237,6 +403,17 @@ class TestRoutineEntry( unittest.TestCase ):
     """
     Tests the RoutineEntry class in the routine module
     """
+
+
+    #=========================================================================
+    def setUp( self ):
+        """
+        Performs test setup.
+        """
+        global _testcalls, _testyields
+        _testcalls  = 0
+        _testyields = 0
+
 
     #=========================================================================
     def test_init( self ):
@@ -247,12 +424,149 @@ class TestRoutineEntry( unittest.TestCase ):
         # Create the RoutineEntry object.
         routine = aptask.routine.RoutineEntry( _testentry )
 
-        ### TODO
+        # Make sure the arguments were properly populated.
+        expected = [ ( 'loops', 10 ) ]
+        self.assertListEqual( expected, routine._arguments )
 
-    ### TODO
-    # abort
-    # gethelp
-    # initialize
-    # process
 
+    #=========================================================================
+    def test_abort( self ):
+        """
+        Tests the RoutineEntry abort() method.
+        """
+
+        # Create the RoutineEntry object.
+        routine = aptask.routine.RoutineEntry( _testentry )
+
+        # Check initial status.
+        self.assertEqual( aptask.routine.Report.INIT, routine.report.status )
+        self.assertEqual( 0.0, routine.report.progress )
+        self.assertIsNone( routine.report.message )
+
+        # Request abort.
+        routine.abort()
+
+        # Check done status.
+        self.assertEqual( aptask.routine.Report.DONE, routine.report.status )
+        self.assertEqual( 0.0, routine.report.progress )
+        self.assertIsNone( routine.report.message )
+
+
+    #=========================================================================
+    def test_gethelp( self ):
+        """
+        Tests the RoutineEntry gethelp() method.
+        """
+
+        # Create the RoutineEntry object.
+        routine = aptask.routine.RoutineEntry( _testentry )
+
+        # Check for proper help string.
+        self.assertEqual( '_test_entry_point_function_', routine.gethelp() )
+
+
+    #=========================================================================
+    def test_initialize( self ):
+        """
+        Tests the RoutineEntry initialize() method.
+        """
+
+        global _testcalls
+
+        # Create the RoutineEntry object.
+        routine = aptask.routine.RoutineEntry( _testentry )
+
+        # Verify routine has not been called, or yielded a result.
+        self.assertEqual( 0, _testcalls )
+        self.assertEqual( 0, _testyields )
+
+        # Initialize the routine.
+        routine.initialize()
+
+        # Check report status, progress, and message.
+        self.assertEqual( routine.report.INIT, routine.report.status )
+        self.assertEqual( 0.0, routine.report.progress )
+        self.assertIsNone( routine.report.message )
+
+        # Verify routine has been called, and yielded a result.
+        self.assertEqual( 1, _testcalls )
+        self.assertEqual( 1, _testyields )
+
+
+    #=========================================================================
+    def test_process( self ):
+        """
+        Tests the RoutineEntry process() method.
+        """
+
+        # Create the RoutineEntry object.
+        routine = aptask.routine.RoutineEntry( _testentry )
+
+        # Verify routine has not been called, or yielded a result.
+        self.assertEqual( 0, _testcalls )
+        self.assertEqual( 0, _testyields )
+
+        # Initialize the routine.
+        routine.initialize()
+
+        # Check report status, progress, and message.
+        self.assertEqual( routine.report.INIT, routine.report.status )
+        self.assertEqual( 0.0, routine.report.progress )
+        self.assertIsNone( routine.report.message )
+
+        # Verify routine has been called, and yielded a result.
+        self.assertEqual( 1, _testcalls )
+        self.assertEqual( 1, _testyields )
+
+        # Execute a step in the routine.
+        routine.process()
+
+        # Check report status, progress, and message.
+        self.assertEqual( routine.report.RUNNING, routine.report.status )
+        self.assertEqual( 0.1, routine.report.progress )
+        self.assertIsNone( routine.report.message )
+
+        # Verify the routine was not called again.
+        self.assertEqual( 1, _testcalls )
+
+        # Verify routine has yielded another result.
+        self.assertEqual( 2, _testyields )
+
+        # Execute a another step in the routine.
+        routine.process()
+
+        # Check report status, progress, and message.
+        self.assertEqual( routine.report.RUNNING, routine.report.status )
+        self.assertEqual( 0.2, routine.report.progress )
+        self.assertIsNone( routine.report.message )
+
+        # Verify routine has yielded another result.
+        self.assertEqual( 3, _testyields )
+
+        # Execute remaining steps.
+        yields = 3
+        while routine.is_done() == False:
+
+            # Check the last known progress.
+            self.assertAlmostEqual(
+                ( yields - 1 ) * 0.1,
+                routine.report.progress
+            )
+
+            # Execute a step in the routine.
+            routine.process()
+
+            # Check number of values yielded from generator.
+            yields += 1
+            self.assertEqual( yields, _testyields )
+
+        # Check report status, progress, and message.
+        self.assertEqual( routine.report.DONE, routine.report.status )
+        self.assertEqual( 1.0, routine.report.progress )
+        self.assertIsNone( routine.report.message )
+
+
+# Run tests when run directly from the shell.
+if __name__ == '__main__':
+    unittest.main()
 
