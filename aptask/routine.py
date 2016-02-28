@@ -39,13 +39,20 @@ routine will be unable to report incremental progress.
 This method is successively called to allow the routine to make progress
 towards its goal.  The method is (typically) called in a very tight loop which
 means that the routine may arbitrate the granularity of progress updates.  If
-the routine makes "significant" progress, it should return an update on that
-progress, and wait for the next invocation of the method.
+the routine makes "significant" progress, it should update the provided
+`.report` attribute, return, and wait for the next invocation of the method.
 
 ### Reporting
 
-The routine protocol allows any method to return an integer, a float, a
-string, or an instance of the Report class.
+Subclasses of Routine should report status, progress, and any user-targeted
+messages in the provided `.report` attribute.  This attribute is monitored for
+changes in the routine while it is executed.  Changing its `status` attribute
+will inform the task scheduler if your routine has started successfully, is
+making progress, or is complete.
+
+Additionally, the `.report` may be updated using the following simple values.
+These values will automatically cause status and progress changes in the
+routine.
 
 #### `float` Values
 
@@ -72,10 +79,11 @@ The caller will treat integer values similarly to a shell-style exit code.
 | v > 0 | Routine encountered an error.       |
 | v < 0 | Undefined/reserved for future user. |
 
-#### `Report` Objects
+#### `str` or Serializable Values
 
-The most formal reporting is done by using a `Report` object.  This object can
-be used to report state, progress, and a message for clients.
+Values that are strings or can be serialized into strings will indicate that
+the routine has completed successfully.  The string is sent as feedback in the
+report, so it may contain helpful information for users of the routine.
 
 """
 
