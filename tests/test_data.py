@@ -263,3 +263,7 @@ class DataTests( unittest.TestCase ):
         self.assertListEqual( expected_keys, sobj.keys() )
 
 
+# Run tests when run directly from the shell.
+if __name__ == '__main__':
+    unittest.main()
+
