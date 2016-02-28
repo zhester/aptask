@@ -129,6 +129,51 @@ def get_function_arguments( function ):
 
 
 #=============================================================================
+def update( report, result ):
+    """
+    Updates a given report instance with the result of a routine method.
+    """
+
+    # Simple, shell-like results.
+    if type( result ) is int:
+        report.progress = 1.0
+        if result < 0:
+            report.status = report.ERROR
+        else:
+            report.status = report.DONE
+
+    # Execution progress results.
+    elif type( result ) is float:
+        if result < 0.0:
+            report.status = report.ERROR
+            result = 1.0
+        elif result >= 1.0:
+            report.status = report.DONE
+            result = 1.0
+        elif result == 0.0:
+            report.status = report.INIT
+        else:
+            report.status = report.RUNNING
+        report.progress = result
+
+    # String results.
+    elif isinstance( result, basestring ):
+        report.progress = 1.0
+        report.status   = report.DONE
+        report.message  = result
+
+    # Formal report results.
+    elif isinstance( result, Report ):
+        report.__dict__.update( result.__dict__ )
+
+    # Any other results.
+    else:
+        report.progress = 1.0
+        report.status   = report.DONE
+        report.message  = str( result )
+
+
+#=============================================================================
 class Report( data.Data ):
     """
     The object sent to the worker when reporting the status and progress of
@@ -159,15 +204,8 @@ class Report( data.Data ):
 
 
     #=========================================================================
-    def is_done( self ):
-        """
-        Informs interested parties if the task has completed.
-
-        @return True when task has finished executing
-        """
-
-        # Produce a Boolean value for the done state.
-        return self.status == self.DONE
+    # Bind the `update()` function to the class.
+    update = update
 
 
 #=============================================================================
@@ -183,8 +221,6 @@ class Routine( object ):
     | `abort`      | Called to stop the task before completion     |
     | `initialize` | Called to initialize or start the task        |
     | `process`    | Called iteratively until the task is complete |
-
-    All methods must return a `Report` object describing its status.
 
     Child classes specify a list of arguments they can accept for customizing
     per-task execution.  This is done by defining a class attribute
@@ -208,6 +244,7 @@ class Routine( object ):
 
         # Initialize object state.
         self.arguments = {}
+        self.report    = Report()
 
         # Check for declared arguments.
         if self._arguments is not None:
@@ -220,6 +257,16 @@ class Routine( object ):
                 self.arguments[ self._arguments[ index ][ 0 ] ] = value
             for key, value in kwargs.items():
                 self.arguments[ key ] = value
+
+
+    #=========================================================================
+    def abort( self ):
+        """
+        Stops the execution of this task before completion.
+
+        @throws NotImplementedError Subclass does not support this method
+        """
+        raise NotImplementedError()
 
 
     #=========================================================================
@@ -258,14 +305,13 @@ class Routine( object ):
 
 
     #=========================================================================
-    def abort( self ):
+    def getstatus( self ):
         """
-        Stops the execution of this task before completion.
+        Gets the routine's current status.
 
-        @return                     Task progress, state, or report
-        @throws NotImplementedError Subclass does not support this method
+        @return The routine's current status value
         """
-        raise NotImplementedError()
+        return self.report.status
 
 
     #=========================================================================
@@ -273,10 +319,17 @@ class Routine( object ):
         """
         Initializes or starts the execution of this task.
 
-        @return                     Task progress, state, or report
         @throws NotImplementedError Subclass does not support this method
         """
         raise NotImplementedError()
+
+
+    #=========================================================================
+    def is_done( self ):
+        """
+        Interface to see if the routine is in a done state.
+        """
+        return self.report.status == self.report.DONE
 
 
     #=========================================================================
@@ -284,7 +337,6 @@ class Routine( object ):
         """
         Called iteratively until the task reports completion.
 
-        @return                     Task progress, state, or report
         @throws NotImplementedError Subclass does not support this method
         """
         raise NotImplementedError()
@@ -315,24 +367,18 @@ class RoutineEntry( Routine ):
         super( RoutineEntry, self ).__init__( *args, **kwargs )
 
         # Initialize object state.
-        self.function = function
-        self.iterator = None
-        self.report   = Report()
+        self._function = function
+        self._iterator = None
 
 
     #=========================================================================
     def abort( self ):
         """
         Prevents further execution of the routine (if possible).
-
-        @return Task (early) completion status
         """
 
         # Set the done status in the report.
         self.report.status = Report.DONE
-
-        # Report done status.
-        return self.report
 
 
     #=========================================================================
@@ -342,15 +388,13 @@ class RoutineEntry( Routine ):
         """
 
         # Provide the function's docstring.
-        return inspect.getdoc( self.function )
+        return inspect.getdoc( self._function )
 
 
     #=========================================================================
     def initialize( self ):
         """
         Initializes the routine iterator.
-
-        @return Task progress, state, or report
         """
 
         # Construct positional argument list for declared arguments.
@@ -360,53 +404,29 @@ class RoutineEntry( Routine ):
                 args.append( self.arguments[ name ] )
 
         # Create the iterable object for this routine.
-        self.iterator = self.function( *args )
+        self._iterator = self._function( *args )
+
+        # Execute the routine once to allow it to initialize.
+        self.process()
 
 
     #=========================================================================
     def process( self ):
         """
         Provides iterative execution of the routine.
-
-        @return Task progress, state, or report
         """
 
-        # Check for early termination of the routine.
-        if self.report.is_done() == True:
-            return self.report
-
-        # Check for natural termination of the routine.
-        if self.report.progress >= 1.0:
-            return self.report
+        # Check to see if the routine was aborted or otherwise terminated.
+        if self.report.status == self.report.DONE:
+            return
 
         # Execute the next iteration of the routine.
         try:
-            result = self.iterator.next()
+            result = self._iterator.next()
         except StopIteration:
             result = 0
 
-        # Update task state for simple routines.
-        if type( result ) is int:
-            if result < 0:
-                self.report.status = Report.ERROR
-            else:
-                self.report.status = Report.DONE
+        # Update the report.
+        self.report.update( result )
 
-        # Update task state for progress-reporting routines.
-        elif type( result ) is float:
-            if result < 0.0:
-                self.report.status = Report.ERROR
-            elif result >= 1.0:
-                self.report.status = Report.DONE
-            else:
-                self.report.progress = result
-
-        # Update task state for all other routines.
-        else:
-            self.report.status = Report.DONE
-            if isinstance( result, basestring ):
-                self.report.message = result
-
-        # Report routine progress or state.
-        return self.report
 
