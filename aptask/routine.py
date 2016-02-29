@@ -279,7 +279,7 @@ class Routine( object ):
 
     #=========================================================================
     @classmethod
-    def getargs( cls ):
+    def get_args( cls ):
         """
         Retrieves the routine's declared arguments.
 
@@ -297,7 +297,7 @@ class Routine( object ):
 
     #=========================================================================
     @classmethod
-    def gethelp( cls ):
+    def get_help( cls ):
         """
         Retrieves any helpful information that should be sent to the user.
 
@@ -313,7 +313,7 @@ class Routine( object ):
 
 
     #=========================================================================
-    def getstatus( self ):
+    def get_status( self ):
         """
         Gets the routine's current status.
 
@@ -390,7 +390,7 @@ class RoutineEntry( Routine ):
 
 
     #=========================================================================
-    def gethelp( self ):
+    def get_help( self ):
         """
         Retrieves the routine's docstring.
         """

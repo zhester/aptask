@@ -243,14 +243,14 @@ class TestRoutine( unittest.TestCase ):
 
 
     #=========================================================================
-    def test_getargs( self ):
+    def test_get_args( self ):
         """
-        Tests the getargs() Routine method.
+        Tests the get_args() Routine method.
         """
 
         # Create a routine without arguments.
         routine = aptask.routine.Routine()
-        self.assertListEqual( [], routine.getargs() )
+        self.assertListEqual( [], routine.get_args() )
 
         # Create a routine with arguments.
         routine  = _SubRoutine()
@@ -272,7 +272,7 @@ class TestRoutine( unittest.TestCase ):
                 'default' : _SubRoutine._arguments[ 3 ][ 1 ]
             }
         ]
-        self.assertListEqual( expected, routine.getargs() )
+        self.assertListEqual( expected, routine.get_args() )
 
 
     #=========================================================================
@@ -298,27 +298,27 @@ class TestRoutine( unittest.TestCase ):
 
 
     #=========================================================================
-    def test_gethelp( self ):
+    def test_get_help( self ):
         """
-        Tests the gethelp() Routine method.
+        Tests the get_help() Routine method.
         """
 
         # Create a routine with a simple docstring.
         routine = _SubRoutine()
-        self.assertEqual( '_test_sub_routine_class_', routine.gethelp() )
+        self.assertEqual( '_test_sub_routine_class_', routine.get_help() )
 
 
     #=========================================================================
-    def test_getstatus( self ):
+    def test_get_status( self ):
         """
-        Tests the getstatus() Routine method.
+        Tests the get_status() Routine method.
         """
 
         # Create a base routine.
         routine = aptask.routine.Routine()
 
         # Verify status is set to initial status.
-        self.assertEqual( aptask.routine.Report.INIT, routine.getstatus() )
+        self.assertEqual( aptask.routine.Report.INIT, routine.get_status() )
 
 
     #=========================================================================
@@ -453,16 +453,16 @@ class TestRoutineEntry( unittest.TestCase ):
 
 
     #=========================================================================
-    def test_gethelp( self ):
+    def test_get_help( self ):
         """
-        Tests the RoutineEntry gethelp() method.
+        Tests the RoutineEntry get_help() method.
         """
 
         # Create the RoutineEntry object.
         routine = aptask.routine.RoutineEntry( _testentry )
 
         # Check for proper help string.
-        self.assertEqual( '_test_entry_point_function_', routine.gethelp() )
+        self.assertEqual( '_test_entry_point_function_', routine.get_help() )
 
 
     #=========================================================================
