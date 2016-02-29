@@ -138,7 +138,7 @@ class Configuration( object ):
         """
         """
 
-        path = self.get_path( 'tasks' )
+        path = self.get_path( 'routines' )
 
         if path not in sys.path:
             sys.path.append( path )
@@ -155,8 +155,8 @@ class Configuration( object ):
                     index.append(
                         {
                             'name'      : symname,
-                            'arguments' : ref.getargs(),
-                            'help'      : ref.gethelp()
+                            'arguments' : ref.get_args(),
+                            'help'      : ref.get_help()
                         }
                     )
 
@@ -243,20 +243,12 @@ class Configuration( object ):
 
         dirs = self._data[ 'directories' ]
 
-        # Data directory is required.
-        if 'data' not in dirs:
+        # Routines directory is required.
+        if 'routines' not in dirs:
             raise VerificationError()
 
-        # Tasks directory is required.
-        if 'tasks' not in dirs:
-            raise VerificationError()
-
-        # Make sure script has access to data directory.
-        if os.access( dirs[ 'data' ], ( os.R_OK | os.W_OK | os.X_OK ) ) == False:
-            raise VerificationError()
-
-        # Make sure script has access to tasks directory.
-        if os.access( dirs[ 'tasks' ], ( os.R_OK | os.X_OK ) ) == False:
+        # Make sure script has access to routines directory.
+        if os.access( dirs[ 'routines' ], ( os.R_OK | os.X_OK ) ) == False:
             raise VerificationError()
 
         # Check/default the logging level.

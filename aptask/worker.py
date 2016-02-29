@@ -16,7 +16,7 @@ import multiprocessing
 import Queue
 
 import data
-import task
+import routine
 import watchdog
 
 
@@ -173,20 +173,20 @@ def worker( command_queue, status_queue, task_descriptor ):
     # set up a watchdog timer
     dog = watchdog.Timer()
 
-    # create the task object according to the descriptor
-    tsk = _create_task( task_descriptor )
+    # create the routine object according to the descriptor
+    rtn = _create_routine( task_descriptor )
 
     # initialize task
     #   some tasks will initialize here and start processing later
     #   some tasks will block here until complete
     #   some tasks won't implement this
     try:
-        report = tsk.initialize()
-    except task.NotSupported:
-        report = task.Report()
+        rtn.initialize()
+    except NotImplementedError:
+        pass
 
     # loop until the task reports completion
-    while report.is_done() == False:
+    while rtn.is_done() == False:
 
         # check the watchdog timer for a timeout after a stuck abort
         if dog.check() == False:
@@ -204,10 +204,10 @@ def worker( command_queue, status_queue, task_descriptor ):
 
                 # try to abort the task
                 try:
-                    report = tsk.abort()
+                    rtn.abort()
 
                 # not supported, just stop processing
-                except task.NotSupported:
+                except NotImplementedError:
                     break
 
                 # start a timer to make sure we abort the process
@@ -219,30 +219,33 @@ def worker( command_queue, status_queue, task_descriptor ):
         #   some tasks will block here until complete
         #   some tasks won't implement this
         try:
-            report = tsk.process()
-        except task.NotSupported:
+            rtn.process()
+        except NotImplementedError:
             pass
 
         # send status and progress to manager
         try:
-            status_queue.put_nowait( report )
+            status_queue.put_nowait( rtn.report )
         except Queue.Full:
             pass
 
 
 #=============================================================================
-def _create_task( descriptor ):
+def _create_routine( descriptor ):
     """
-    Creates a task object from a descriptor.
+    Creates a routine object from a descriptor.
 
     @param descriptor Task descriptor
     @return           Task instance
     """
 
-    # import the task module by name
+    ### ZIH - refactor descriptors and pre-built list of routines
+    ### ZIH - add support for RoutineEntry functions
+
+    # import the routine module by name
     module = importlib.import_module( descriptor[ 'name' ].lower() )
 
-    # get the reference to the task driver class
+    # get the reference to the routine driver class
     class_ref = getattr( module, descriptor[ 'name' ] )
 
     # instantiate the class, and return it

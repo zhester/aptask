@@ -2,10 +2,9 @@
     "_see" : "INSTALL.md",
     "host" : "",
     "port" : 2142,
-    "loglevel" : "WARNING",
+    "loglevel" : "INFO",
     "directories" : {
-        "tasks" : "tasks",
-        "data" : "var"
+        "routines" : "routines"
     },
     "keys" : {
         "admins" : [ "adminkey" ],

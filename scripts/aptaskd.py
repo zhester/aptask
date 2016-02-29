@@ -39,7 +39,10 @@ except ImportError:
 
 
 # Initialize the logging sub-system.
-logging.basicConfig()
+logging.basicConfig(
+    format = '["%(asctime)s","%(levelname)s",%(process)d,"%(module)s"' \
+           + ',%(lineno)d,"%(message)s"]'
+)
 
 # Create the root logger.
 _logger = logging.getLogger()
@@ -75,7 +78,7 @@ def start( config ):
     global _is_running
 
     # Add tasks directory to import path list.
-    sys.path.append( config.get_path( 'tasks' ) )
+    sys.path.append( config.get_path( 'routines' ) )
 
     # Notify the log that we're starting.
     _logger.info( 'Initializing daemon.' )
