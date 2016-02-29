@@ -44,6 +44,7 @@ Features and New Development
 - Add to unit tests.
 - Create a set of complete integration and regression tests.
 - Check test coverage.
+- Add benchmarking and profiling.
 
 ### New Stuff
 
@@ -65,21 +66,26 @@ Features and New Development
   - These persist after the task has finished up until requested by a client.
 - Implement remote workers.
   - Abstract communication pipes to work over network.
+- Add direct HTTP interface.
+- Optional status and results posting to a Redis server.
+- Add the admin interface to allow monitoring/controlling tasks, gathering
+  statistics, and possibly pulling in new routines.
 
 New Scheduling Design Notes
 ---------------------------
 
-raqueue/fifo/WorkerFifo needs help.  Might be easier to implement a better
-scheduling system.  Also, it's time to bring in execution dependencies (only
-allowing a task to be processed if another one has completed) and priorities.
-
-A task is now a bundle of information:
+A task is now a bundle of information describing a unique execution of a
+pre-defined routine with a set of arguments supplied at execution-time.
 
 - routine: requested by the user (formerly "tasks" in the tasks directory)
+- arguments: the arguments to pass to the routine
 - job identifier: given by the user (uniqueness for the user only)
 - job dependencies: list of jobids that must finish first
-- job priority: given by the user
+- job priority: given/requested by the user
+- group key: isolates/namespaces different applications/users
 - task identifier: assigned by the scheduler (same as task ID right now)
+- task state: init, running, waiting, etc.
+- results: posted by the routine, cleaned up when requested by user
 
 The scheduler then implements a single pending/inactive task queue.  The
 scheduler maintains a separate active task object for each worker.  When
@@ -93,4 +99,25 @@ This effort will require refactoring the task module to the new routine
 module.  Then, a new task module will better reflect the metaphore of a unique
 execution of a routine.  The task module will implement the Queue/Scheduler
 and the new Task class.  This should also simplify the manager module.
+
+### Current Efforts
+
+0. Clean up JSON injection into logger.
+
+1. Add interfaces to make Routine management simpler for user code.
+
+    aptask.routine.get_index() # list of all available/checked routines
+    aptask.routine.create()    # factory function, supply name + arguments
+
+2. Implement the new Task object.
+
+    Task.id,priority,waitfor,jobid,groupkey,state,routine,result
+
+3. Implement the new Scheduler/Queue.
+
+4. Re-implement Manager to use the new scheduler and tasks.
+
+5. Add task results posting.
+
+    Report, WorkLog, User-defined result data/object
 
