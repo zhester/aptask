@@ -10,6 +10,7 @@ routine Module Unit Tests
 """
 
 
+import os
 import unittest
 
 
@@ -85,6 +86,69 @@ class Test_get_function_arguments( unittest.TestCase ):
             ( 'c', 'hello' )
         ]
         self.assertListEqual( expected, actual )
+
+
+#=============================================================================
+class Test_get_index( unittest.TestCase ):
+    """
+    Tests the get_index() module function
+    """
+
+
+    #=========================================================================
+    def test_get_index( self ):
+        """
+        Tests the get_index() module function
+        """
+
+        # Use the provided routine directory.
+        script_path = os.path.realpath( __file__ )
+        script_dir  = os.path.dirname( script_path )
+        proj_dir    = os.path.dirname( script_dir )
+        routine_dir = os.path.join( proj_dir, 'routines' )
+
+        # Define an expected list of routine descriptions.
+        expected = [
+            {
+                'name'      : 'deventry',
+                'help'      : 'Project development and testing routine.',
+                'arguments' : [
+                    {
+                        'name'    : 'wait',
+                        'default' : 0.0
+                    }
+                ]
+            },
+            {
+                'name'      : 'develop',
+                'help'      : 'Project development and testing routine.',
+                'arguments' : [
+                    {
+                        'name'    : 'devarg',
+                        'default' : 42
+                    },
+                    {
+                        'name'    : 'abortwait',
+                        'default' : 0
+                    },
+                    {
+                        'name'    : 'initwait',
+                        'default' : 0
+                    },
+                    {
+                        'name'    : 'processwait',
+                        'default' : 0
+                    }
+                ]
+            }
+        ]
+
+        # Load index.
+        index = aptask.routine.get_index( routine_dir )
+
+        # Verify each expected dictionary is in the index.
+        for item in expected:
+            self.assertIn( item, index )
 
 
 #=============================================================================

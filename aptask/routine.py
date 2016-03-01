@@ -88,7 +88,11 @@ report, so it may contain helpful information for users of the routine.
 """
 
 
+import glob
+import importlib
 import inspect
+import os
+import sys
 
 import data
 
@@ -134,6 +138,82 @@ def get_function_arguments( function ):
 
     # Return the constructed list of arguments.
     return arguments
+
+
+#=============================================================================
+def get_index( directory ):
+    """
+    Retrieves a list of valid routine implementations in the given directory.
+
+    @param directory The directory to search
+    @return          A list of dictionaries describing each routine
+    """
+
+    # Check for directory in Python's path.
+    if directory not in sys.path:
+        sys.path.insert( 0, directory )
+
+    # Initialize the list of routines.
+    index = []
+
+    # Get a list of all Python modules in the given directory.
+    modules = glob.glob( directory + '/*.py' )
+
+    # Scan each Python module.
+    for modfile in modules:
+
+        # Derive module name from file name.
+        modname = os.path.basename( modfile )[ : -3 ]
+
+        # Import the module by name.
+        # ZIH - protect against modules with invalid code
+        module = importlib.import_module( modname )
+
+        # Retrieve list of symbols in the module.
+        symbols = dir( module )
+
+        # Look for a function named "routine."
+        if 'routine' in symbols:
+
+            # Get a reference to the apparent function.
+            funcref = getattr( module, 'routine' )
+
+            # Ensure this is a function.
+            if callable( funcref ):
+
+                # Create a temporary routine object to interrogate the
+                # function.
+                rtn = RoutineEntry( funcref )
+
+                # Append routine description dictionary to list.
+                index.append(
+                    {
+                        'name'      : modname,
+                        'arguments' : rtn.get_args(),
+                        'help'      : rtn.get_help()
+                    }
+                )
+
+        # Look for a class named "Routine."
+        if 'Routine' in symbols:
+
+            # Get reference to the apparent class.
+            classref = getattr( module, 'Routine' )
+
+            # Ensure this is a Routine class.
+            if issubclass( classref, Routine ):
+
+                # Append routine description dictionary to list.
+                index.append(
+                    {
+                        'name'      : modname,
+                        'arguments' : classref.get_args(),
+                        'help'      : classref.get_help()
+                    }
+                )
+
+    # Return list of available routines.
+    return index
 
 
 #=============================================================================
@@ -387,6 +467,20 @@ class RoutineEntry( Routine ):
 
         # Set the done status in the report.
         self.report.status = Report.DONE
+
+
+    #=========================================================================
+    def get_args( self ):
+        """
+        Retrieves the routine's argument specification.
+        """
+
+        # Check for declared arguments.
+        if self._arguments is None:
+            return []
+
+        # Return a list of dictionaries describing the arguments.
+        return [ { 'name' : n, 'default' : d } for n, d in self._arguments ]
 
 
     #=========================================================================

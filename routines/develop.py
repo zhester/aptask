@@ -25,9 +25,9 @@ __version__ = '0.0.0'
 
 
 #=============================================================================
-class Develop( aptask.routine.Routine ):
+class Routine( aptask.routine.Routine ):
     """
-    This is a routine used for developmental purposes.
+    Project development and testing routine.
     """
 
 

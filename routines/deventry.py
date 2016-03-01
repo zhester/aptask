@@ -104,12 +104,9 @@ __version__ = '0.0.0'
 
 
 #=============================================================================
-def routine( arg1 = 1, arg2 = 2.0, arg3 = '3', arg4 = None, wait = 0.0 ):
+def routine( wait = 0.0 ):
     """
-    Development and testing routine.
-
-    @param * List of arguments with default values (see: module's docstring)
-    @return  A routine status value (see: module's docstring)
+    Project development and testing routine.
     """
     progress = 0.0
     while progress <= 1.0:
