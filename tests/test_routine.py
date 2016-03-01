@@ -11,6 +11,7 @@ routine Module Unit Tests
 
 
 import os
+import sys
 import unittest
 
 
@@ -40,6 +41,48 @@ class _SubRoutine( aptask.routine.Routine ):
         self._initialize_called += 1
     def process( self ):
         self._process_called += 1
+
+
+#=============================================================================
+class Test_create( unittest.TestCase ):
+    """
+    Tests the create() module function
+    """
+
+
+    #=========================================================================
+    def test_create( self ):
+        """
+        Tests the create() module function
+        """
+
+        # Put the included "routines" directory in Python's path.
+        script_path = os.path.realpath( __file__ )
+        script_dir  = os.path.dirname( script_path )
+        proj_dir    = os.path.dirname( script_dir )
+        routine_dir = os.path.join( proj_dir, 'routines' )
+        sys.path.insert( 0, routine_dir )
+
+        # Create the entry-point-style routine.
+        routine = aptask.routine.create( 'deventry', [ 1.0 ] )
+        self.assertIsInstance( routine, aptask.routine.RoutineEntry )
+        self.assertEqual( 1.0, routine.arguments[ 'wait' ] )
+
+        # Create the standard routine.
+        routine = aptask.routine.create( 'develop', [ 43, 2, 1 ] )
+        self.assertIsInstance( routine, aptask.routine.Routine )
+        self.assertEqual( 43, routine.arguments[ 'devarg' ] )
+        self.assertEqual( 2, routine.arguments[ 'abortwait' ] )
+        self.assertEqual( 1, routine.arguments[ 'initwait' ] )
+        self.assertEqual( 0, routine.arguments[ 'processwait' ] )
+
+        # Create something that can't be imported.
+        with self.assertRaises( RuntimeError ):
+            routine = aptask.routine.create( 'fake' )
+
+        # Create something that doesn't support the routine API.
+        with self.assertRaises( RuntimeError ):
+            routine = aptask.routine.create( 'task' )
 
 
 #=============================================================================

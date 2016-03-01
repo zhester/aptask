@@ -98,6 +98,45 @@ import data
 
 
 #=============================================================================
+def create( name, arguments = None ):
+    """
+    Creates Routine objects using the name and supplied arguments.
+
+    Note: This assumes the "routines" directory is already in Python's path.
+
+    @param name      The module name of the routine
+    @param arguments The list of arguments to pass to the routine
+    """
+
+    # Default the arguments list.
+    if arguments is None:
+        arguments = []
+
+    # Attempt to import the routine's module.
+    try:
+        module = importlib.import_module( name )
+    except ImportError:
+        raise RuntimeError( 'Invalid routine module "{}"'.format( name ) )
+
+    # Look for modules with a routine function.
+    funcref = getattr( module, 'routine', None )
+    if ( funcref is not None ) and callable( funcref ):
+
+        # Create the entry-point routine instance.
+        return RoutineEntry( funcref, *arguments )
+
+    # Look for modules with a Routine class.
+    classref = getattr( module, 'Routine', None )
+    if ( classref is not None ) and issubclass( classref, Routine ):
+
+        # Create the routine instance.
+        return classref( *arguments )
+
+    # Requested module does not support the API.
+    raise RuntimeError( 'Invalid routine module "{}"'.format( name ) )
+
+
+#=============================================================================
 def get_function_arguments( function ):
     """
     Retrieves the list of function arguments of a given function for use in a

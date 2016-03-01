@@ -104,20 +104,15 @@ and the new Task class.  This should also simplify the manager module.
 
 0. Clean up JSON injection into logger.
 
-1. Add interfaces to make Routine management simpler for user code.
-
-    aptask.routine.get_index() # list of all available/checked routines
-    aptask.routine.create()    # factory function, supply name + arguments
-
-2. Implement the new Task object.
+1. Implement the new Task object.
 
     Task.id,priority,waitfor,jobid,groupkey,state,routine,result
 
-3. Implement the new Scheduler/Queue.
+2. Implement the new Scheduler/Queue.
 
-4. Re-implement Manager to use the new scheduler and tasks.
+3. Re-implement Manager to use the new scheduler and tasks.
 
-5. Add task results posting.
+4. Add task results posting.
 
     Report, WorkLog, User-defined result data/object
 
