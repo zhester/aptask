@@ -18,6 +18,7 @@ import logging
 
 import fifo
 import request
+import routine
 import worker
 
 
@@ -313,7 +314,9 @@ class Manager( object ):
         """
 
         # Construct the complete list of available tasks in the system.
-        self.task_index = self.config.get_task_index()
+        self.task_index = routine.get_index(
+            self.config.get_path( 'routines' )
+        )
 
         # Create a lookup table of task specifiers by name.
         self.task_names = [ x[ 'name' ] for x in self.task_index ]

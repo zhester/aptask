@@ -134,36 +134,6 @@ class Configuration( object ):
 
 
     #=========================================================================
-    def get_task_index( self ):
-        """
-        """
-
-        path = self.get_path( 'routines' )
-
-        if path not in sys.path:
-            sys.path.append( path )
-
-        index = []
-
-        modules = glob.glob( path + '/*.py' )
-        for modfile in modules:
-            modname = os.path.basename( modfile )[ : -3 ]
-            module  = importlib.import_module( modname )
-            for symname in dir( module ):
-                if symname.lower() == modname:
-                    ref = getattr( module, symname )
-                    index.append(
-                        {
-                            'name'      : symname,
-                            'arguments' : ref.get_args(),
-                            'help'      : ref.get_help()
-                        }
-                    )
-
-        return index
-
-
-    #=========================================================================
     def is_admin( self, auth_key ):
         """
         """
