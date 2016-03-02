@@ -8,6 +8,14 @@
 """
 Worker Process
 ==============
+
+The worker module implements the process management class `Worker` that uses
+the process entry point `worker` to execute tasks in a separate process from
+the aptask manager/scheduler.
+
+The worker is responsible for handling commands from the manager, and
+reporting its status as the task is executing.  Well-written routines will
+allow the worker process to refresh the status regularly.
 """
 
 
@@ -23,13 +31,13 @@ import watchdog
 #=============================================================================
 class Command( data.Data ):
     """
-    Worker control command.
+    Worker control command data objects
     """
 
 
     #=========================================================================
-    CONTINUE = 0
-    ABORT    = 1
+    CONTINUE = 0 # Default command (basically a no-op)
+    ABORT    = 1 # Worker commanded to abort further task execution
 
 
     #=========================================================================
@@ -38,14 +46,27 @@ class Command( data.Data ):
     ]
 
 
+    #=========================================================================
+    def __eq__( self, other ):
+        """
+        Allow comparison operator to work with command objects.
+
+        @param other The other instance to compare to the current instance
+        @return      True if both instances are functionally equal
+        """
+        return self.command_id == other.command_id
+
+
 #=============================================================================
-ABORT = Command( Command.ABORT )
+# Create the commonly-used abort command.
+ABORT_COMMAND = Command( Command.ABORT )
 
 
 #=============================================================================
 class Worker( multiprocessing.Process ):
     """
-    Worker process interface object.
+    Worker process interface object
+
     Instances of this object are intended to be used to control and interact
     with worker processes from a parent process.  No memory is shared with the
     worker process.
@@ -53,9 +74,9 @@ class Worker( multiprocessing.Process ):
 
 
     #=========================================================================
-    INIT     = 0                    # initialized, ready to run
-    RUNNING  = 1                    # running
-    STOPPING = 2                    # shutting down process
+    INIT     = 0 # Initialized, ready to run
+    RUNNING  = 1 # Running
+    STOPPING = 2 # Shutting down process
 
 
     #=========================================================================
@@ -63,64 +84,71 @@ class Worker( multiprocessing.Process ):
 
 
     #=========================================================================
-    def __init__( self, descriptor, authkey = None ):
+    def __init__( self, descriptor, group = None ):
         """
-        Constructor.
-        @param descriptor
-                        Task execution descriptor
-        @param authkey  Task owner's authentication key
+        Initializes a Worker instance.
+
+        @param descriptor Routine execution descriptor dictionary
+        @param group      Task namespace group
         """
 
-        # create the IPC message queues
-        self.command_queue = multiprocessing.Queue()
-        self.status_queue  = multiprocessing.Queue()
+        # Create the IPC message queues.
+        self._command_queue = multiprocessing.Queue()
+        self._status_queue  = multiprocessing.Queue()
 
-        # initialize the parent
+        # Initialize parent state.
         super( Worker, self ).__init__(
             target = worker,
-            args   = ( self.command_queue, self.status_queue, descriptor ),
-            name   = 'aptaskworker'
+            args   = ( self._command_queue, self._status_queue, descriptor ),
+            name   = 'aptask_worker_' + descriptor[ 'name' ]
         )
 
-        # initialize object state
-        self.authkey = authkey
-        self.state   = Worker.INIT
-        self.status  = None
+        # Initialize object state.
+        self.group   = group
+        self._state  = self.INIT
+        self._status = None
 
 
     #=========================================================================
     def get_status( self ):
         """
-        Get the latest status for this task.
-        @return         A Report object describing the status
+        Retreives the latest status for this task.
+
+        @return A Report object describing the routine's status
         """
 
-        # set invalid status to detect if there was a status update
+        # Set invalid status to detect if there was a status update.
         status = None
 
-        # loop until the status queue is empty
+        # Loop until the status queue is empty.
         while True:
+
+            # Attempt to dequeue the next item in the status queue.
             try:
-                status = self.status_queue.get_nowait()
+                status = self._status_queue.get_nowait()
+
+            # No new status reports from routine.
             except Queue.Empty:
                 break
 
-        # check for an update
+        # Check for an update to the status.
         if status is not None:
-            self.status = status
 
-        # return most recent status update
-        return self.status
+            # Update the tracked status.
+            self._status = status
+
+        # Return most recent status update.
+        return self._status
 
 
     #=========================================================================
     def is_active( self ):
         """
         Check to see if the worker is actively processing its task.
-        @return         True if the worker is active
-        """
 
-        return self.state == Worker.RUNNING
+        @return True if the worker is active, otherwise False
+        """
+        return self._state == self.RUNNING
 
 
     #=========================================================================
@@ -129,7 +157,10 @@ class Worker( multiprocessing.Process ):
         Start executing the task.
         """
 
-        self.state = Worker.RUNNING
+        # Change state to running.
+        self._state = self.RUNNING
+
+        # Use parent implementation to start the process.
         super( Worker, self ).start()
 
 
@@ -139,115 +170,82 @@ class Worker( multiprocessing.Process ):
         Stop executing the task.
         """
 
-        if self.state == Worker.RUNNING:
-            self.command_queue.send( ABORT )
+        # See if the task is currently in the running state.
+        if self._state == self.RUNNING:
 
-        self.state = Worker.STOPPING
+            # Send abort command to task.
+            self._command_queue.put_nowait( ABORT_COMMAND )
 
-
-#=============================================================================
-def create_task_descriptor( name, arguments ):
-    """
-    Decouples the structure of a task descriptor from code outside this
-    module.  Don't count on the returned object having a consistent type or
-    format.
-    @param name         Task identifier
-    @param arguments    Arguments to pass to the task
-    """
-
-    # for now, just use a dict
-    return { 'name' : name, 'arguments' : arguments }
+        # Change state to stopping.
+        self._state = self.STOPPING
 
 
 #=============================================================================
-def worker( command_queue, status_queue, task_descriptor ):
+def worker( command_queue, status_queue, descriptor ):
     """
     Function to execute as a worker process.
-    @param command_queue
-                        IPC command queue from parent process
-    @param status_queue IPC status queue to parent process
-    @param task_descriptor
-                        Task descriptor
+
+    @param command_queue IPC command queue from parent process
+    @param status_queue  IPC status queue to parent process
+    @param descriptor    Routine descriptor dictionary
     """
 
-    # set up a watchdog timer
+    # Set up a watchdog timer.
     dog = watchdog.Timer()
 
-    # create the routine object according to the descriptor
-    rtn = _create_routine( task_descriptor )
+    # Create the routine object according to the descriptor.
+    rtn = routine.create( descriptor[ 'name' ], descriptor[ 'arguments' ] )
 
-    # initialize task
-    #   some tasks will initialize here and start processing later
-    #   some tasks will block here until complete
-    #   some tasks won't implement this
+    # Initialize the task's routine.
+    #   Some routines will initialize here and start processing later.
+    #   Some routines will block here until complete.
+    #   Some routines won't implement this.
     try:
         rtn.initialize()
     except NotImplementedError:
         pass
 
-    # loop until the task reports completion
+    # Loop until the task reports completion.
     while rtn.is_done() == False:
 
-        # check the watchdog timer for a timeout after a stuck abort
+        # Check the watchdog timer for a timeout after a stuck abort.
         if dog.check() == False:
             break
 
-        # check for any pending messages
+        # Check for any pending command messages.
         try:
             command = command_queue.get_nowait()
         except Queue.Empty:
             pass
         else:
 
-            # check for an abort command
-            if command.id == Command.ABORT:
+            # Check for an abort command.
+            if command == ABORT_COMMAND:
 
-                # try to abort the task
+                # Try to abort the task.
                 try:
                     rtn.abort()
 
-                # not supported, just stop processing
+                # Not supported, just stop processing.
                 except NotImplementedError:
                     break
 
-                # start a timer to make sure we abort the process
+                # Start a timer to make sure we abort the process.
                 else:
                     dog.start()
 
-        # spend time executing task
-        #   some tasks will quickly update status here
-        #   some tasks will block here until complete
-        #   some tasks won't implement this
+        # Spend time executing task.
+        #   Some routines will quickly update status here.
+        #   Some routines will block here until complete.
+        #   Some routines won't implement this.
         try:
             rtn.process()
         except NotImplementedError:
             pass
 
-        # send status and progress to manager
+        # Send status and progress to manager.
         try:
             status_queue.put_nowait( rtn.report )
         except Queue.Full:
             pass
-
-
-#=============================================================================
-def _create_routine( descriptor ):
-    """
-    Creates a routine object from a descriptor.
-
-    @param descriptor Task descriptor
-    @return           Task instance
-    """
-
-    ### ZIH - refactor descriptors and pre-built list of routines
-    ### ZIH - add support for RoutineEntry functions
-
-    # import the routine module by name
-    module = importlib.import_module( descriptor[ 'name' ].lower() )
-
-    # get the reference to the routine driver class
-    class_ref = getattr( module, descriptor[ 'name' ] )
-
-    # instantiate the class, and return it
-    return class_ref( descriptor[ 'arguments' ] )
 

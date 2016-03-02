@@ -48,12 +48,13 @@ class Manager( object ):
 
 
     #=========================================================================
-    def get_active( self, authkey = None ):
+    def get_active( self, group = None ):
         """
         Retrieves a list of dicts that reports the current status of all
         active tasks.
-        @param authkey  Specify to restrict list to tasks owned by that user
-        @return         A list of dicts describing the active tasks
+
+        @param group Task request namespace group
+        @return      A list of dicts describing the active tasks
         """
 
         # set up a list to populate
@@ -74,10 +75,10 @@ class Manager( object ):
             # get worker object for this task ID
             wrkr = self.workers[ task_id ]
 
-            # check to see if this worker is for the given auth key
-            if ( authkey is not None ) and ( wrkr.authkey != authkey ):
+            # Check to see if this worker is a part of the requested group.
+            if ( group is not None ) and ( wrkr.group != group ):
 
-                # do not report on other user's tasks
+                # Do not report on tasks in other groups.
                 continue
 
             # get the most recent task status
@@ -144,10 +145,10 @@ class Manager( object ):
             # handle request to start a new task
             elif req.request == 'start':
                 if req.name in self.task_names:
-                    descr = worker.create_task_descriptor(
-                        req.name,
-                        req.arguments
-                    )
+                    descr = {
+                        'name'      : req.name,
+                        'arguments' : req.arguments
+                    }
                     task_id = self.workers.add(
                         worker.Worker( descr, req.key )
                     )
