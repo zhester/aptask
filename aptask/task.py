@@ -32,6 +32,7 @@ class Context( object ):
     RUNNING  =  3 # Task is currently running the routine
     STOPPING =  4 # Task is currently trying to stop the routine
     DONE     =  5 # Task has finished running, results available
+    DEQUEUED =  6 # Task no longer belongs to any queue
 
 
     #=========================================================================
