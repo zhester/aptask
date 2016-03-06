@@ -36,6 +36,18 @@ class Context( object ):
 
 
     #=========================================================================
+    # Queue scheduling priorities
+    PRI_NEXT   = 0  # Higher insertion priority
+    PRI_NORMAL = 1  # Normal insertion priority
+    PRI_LAST   = 2  # Lower insertion priority
+
+
+    #=========================================================================
+    # Queue priority strings (indexed by state value)
+    states = ( 'NEXT', 'NORMAL', 'LAST' )
+
+
+    #=========================================================================
     # Queue state strings (indexed by state value)
     states = (
         'initialized', 'enqueued', 'waiting', 'running',
@@ -46,12 +58,12 @@ class Context( object ):
     #=========================================================================
     def __init__(
         self,
-        ident,              # Unique task execution identifier
-        descriptor,         # Routine descriptor dictionary
-        group    = None,    # Request namespace group
-        priority = None,    # Requested priority
-        jobid    = None,    # Requested job identifer
-        waitfor  = None     # List of job IDs that must complete first
+        ident,                 # Unique task execution identifier
+        descriptor,            # Routine descriptor dictionary
+        priority = PRI_NORMAL, # Requested priority
+        group    = None,       # Request namespace group
+        jobid    = None,       # Requested job identifer
+        waitfor  = None        # List of job IDs that must complete first
     ):
         """
         Initializes a Context instance.
