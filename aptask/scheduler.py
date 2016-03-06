@@ -5,6 +5,19 @@
 # ZIH - this should completely replace raqueue module, and simplify the
 # manager module
 #
+# The queue has three modes of insertion based on the priority of the
+# requested task.  The user may request NORMAL, NEXT, or LAST insertion.
+#
+# NORMAL insertion is the default and attempts to place the requested task
+# after all exsting tasks that are waiting to execute.
+#
+# NEXT insertion allows the user to schedule new tasks ahead of tasks that
+# were scheduled with NORMAL priority.
+#
+# LAST insertion allows the user to schedule a low-priority task.  Tasks with
+# LAST priority will only execute after all other priorities have been
+# started.
+#
 #=============================================================================
 
 """
@@ -53,12 +66,8 @@ class Schedule( object ):
         # List of task context objects that are running or have completed
         self._tasks = []
 
-        # Lookup tables
-        self._tables = {
-            'taskid' : {},
-            'jobid'  : {},
-            'wait'   : {}
-        }
+        # Task ID lookup table
+        self._taskids = {}
 
         # The next unique ID to assign to a task
         self._next_id = 1
@@ -99,10 +108,23 @@ class Schedule( object ):
 
         @param task_context The task Context object to enqueue
         """
+
+        # Check for a task that needs to wait for other tasks.
+        if len( task_context.waitfor ) > 0:
+            ### ZIH
+            pass
+
+        # Check for a task that might have dependencies.
+        if task_context.jobid is not None:
+            ### ZIH
+            pass
+
+        # Add task to ready queue.
         ### ZIH
-        # perform a circular dependency check
-        # add to ready queue (schedule priority)
-        # add reference to lookup tables
+        # .priority, .group, .jobid, .waitfor
+
+        # Add this task reference to lookup tables.
+        self._taskids[ task_context.id ] = task_context
 
         # Transition the context's state.
         task_context.state = context.ENQUEUED
@@ -122,17 +144,26 @@ class Schedule( object ):
         if len( self._ready ) == 0:
             raise Empty()
 
-        # Remove the next task context from the ready queue.
-        context = self._ready.pop( 0 )
+        # Scan tasks in the ready queue.
+        for index, task in enumerate( self._ready ):
 
-        # Transition the context's state.
-        context.state = context.RUNNING
+            # Look for queued tasks that are not currently blocked.
+            if self._blocked( task ) == False:
 
-        # Put the task context in the running/done queue.
-        self._tasks.append( context )
+                # Remove this task from the ready queue.
+                context = self._ready.pop( index )
 
-        # Return the reference to this task context.
-        return context
+                # Transition the context's state.
+                context.state = context.RUNNING
+
+                # Put the task context in the running/done queue.
+                self._tasks.append( context )
+
+                # Return the reference to this task context.
+                return context
+
+        # No tasks in the ready queue are ready for execution.
+        raise Empty()
 
 
     #=========================================================================
@@ -147,22 +178,15 @@ class Schedule( object ):
         @throws       RuntimeError if the scheduler encountered a problem
         """
 
-        # Reference the task context reference lookup tables.
-        jobs  = self._tables[ 'jobid' ]
-        tasks = self._tables[ 'taskid' ]
-        waits = self._tables[ 'wait' ]
-
         # Check task ID.
-        if taskid not in tasks:
+        if taskid not in self._taskids:
             raise ValueError( 'Invalid/unknown task ID: {}'.format( taskid ) )
 
         # Reference the task context object.
-        context = tasks[ taskid ]
+        context = self._taskids[ taskid ]
 
         # Check ready queue for the task.
         if context in self._ready:
-            if context.id in waits:
-                raise DependsError( 'Unable to remove task with dependents.' )
             self._ready.remove( context )
 
         # Check task queue for the task.
@@ -173,12 +197,8 @@ class Schedule( object ):
         else:
             raise RuntimeError( 'Scheduler integrity: task missing.' )
 
-        # Remove from lookup tables.
-        if ( context.jobid is not None ) and ( context.jobid in jobs ):
-            del self._tables[ 'jobid' ][ context.jobid ]
-        if context.id in waits:
-            del self._tables[ 'wait' ][ context.id ]
-        del self._tables[ 'taskid' ][ context.id ]
+        # Remove from lookup table.
+        del self._taskids[ context.id ]
 
         # Transition the context state.
         context.state = context.DEQUEUED
@@ -201,6 +221,34 @@ class Schedule( object ):
 
 
     #=========================================================================
+    def _blocked( self, context ):
+        """
+        Tests if a task in the ready queue is waiting for another task to
+        finish.
+
+        @param taskid The task context object to test
+        @return       True if the task must wait, otherwise False
+        """
+
+        # Check if this task depends on other tasks.
+        if len( context.waitfor ) == 0:
+
+            # No dependencies, task is free to run now.
+            return False
+
+        # Scan the task list for jobs that must complete first.
+        for wait in context.waitfor:
+
+            # ZIH - refactoring to use new group.Manager
+
+            # The given task must wait.
+            return True
+
+        # The task is free to run now.
+        return False
+
+
+    #=========================================================================
     def _rescan( self ):
         """
         Performs a complete scan of the ready queue checking each scheduled
@@ -209,4 +257,23 @@ class Schedule( object ):
         """
         ### ZIH
         pass
+
+
+    #=========================================================================
+    def _task_by_id( self, taskid ):
+        """
+        Retrieve any task context object given its ID.
+
+        @param taskid    The ID of the task to fetch
+        @return          The task context object with this ID
+        @throws KeyError If the ID is not present in the scheduler
+        description
+        """
+
+        # Catch invalid task IDs to produce a better exception message.
+        if taskid not in self._taskids:
+            raise KeyError( 'Unknown task ID: {}'.format( taskid ) )
+
+        # Return the reference to the task context object.
+        return self._taskids[ taskid ]
 
